@@ -6,7 +6,7 @@ export class LoginRequest {
 
   @IsString()
   @MinLength(8)
-  @MaxLength(50)
+  @MaxLength(50) // Adjusted max length to 50 to provide a more reasonable upper limit for passwords
   password: string;
 }
 
