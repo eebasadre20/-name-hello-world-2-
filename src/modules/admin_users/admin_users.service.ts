@@ -7,12 +7,11 @@ import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.d
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { LogoutAdminUserRequest, LogoutAdminUserResponse } from './dto/logout-admin-user.dto';
 import * as bcrypt from 'bcrypt';
-import { sendConfirmationEmail } from './utils/email.util';
+import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util';
 import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt'; // Assuming JWT is used for token management
 import { generateToken } from './utils/token.util'; // Assuming custom token utility is used alongside JWT for specific cases
-// Assuming Passport is used for authentication and token management
-import { PassportService } from 'src/auth/passport.service';
+import { PassportService } from 'src/auth/passport.service'; // Assuming Passport is used for authentication and token management
 
 @Injectable()
 export class AdminUsersService {
@@ -45,6 +44,28 @@ export class AdminUsersService {
     await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
 
     return { user: newUser };
+  }
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const user = await this.adminUsersRepository.findOne({ where: { email } });
+    if (!user) {
+      // If user not found, return success message to prevent email enumeration
+      return { message: "Success" };
+    }
+
+    const passwordResetToken = uuidv4();
+    const resetPasswordUrl = `http://frontend.url/reset-password?reset_token=${passwordResetToken}`;
+
+    // Update user with reset token and timestamp
+    await this.adminUsersRepository.update(user.id, {
+      reset_password_token: passwordResetToken,
+      reset_password_sent_at: new Date(),
+    });
+
+    // Send password reset email
+    await sendPasswordResetEmail(email, passwordResetToken, user.name, resetPasswordUrl);
+
+    return { message: "Success" };
   }
 
   async confirmResetPassword({ token, password }: ConfirmResetPasswordRequest): Promise<SuccessResponse> {
