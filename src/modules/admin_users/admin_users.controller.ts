@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { ConfirmResetPasswordRequest, SuccessResponse } from './dto';
 import { AdminUsersService } from './admin_users.service';
 
 @Controller('admin_users')
@@ -24,5 +25,26 @@ export class AdminUsersController {
     return this.adminUsersService.requestPasswordReset(body.email);
   }
 
-  // ... other methods remain unchanged
+  @Post('/reset-password-confirm')
+  async confirmResetPassword(@Body() body: ConfirmResetPasswordRequest): Promise<SuccessResponse> {
+    const { reset_token, password, password_confirmation } = body;
+
+    // Validation
+    if (!reset_token || !password || !password_confirmation) {
+      throw new BadRequestException(`${!reset_token ? 'reset_token' : !password ? 'password' : 'password_confirmation'} is required`);
+    }
+
+    if (password !== password_confirmation) {
+      throw new BadRequestException('Password confirmation does not match');
+    }
+
+    const passwordMinLength = 8; // Assuming password_min_length is 8
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/; // Assuming password_regex is this
+
+    if (password.length < passwordMinLength || !passwordRegex.test(password)) {
+      throw new BadRequestException('Password is invalid');
+    }
+
+    return this.adminUsersService.confirmResetPassword({ token: reset_token, password });
+  }
 }
