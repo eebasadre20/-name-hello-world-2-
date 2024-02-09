@@ -14,7 +14,7 @@ export class AdminUsersService {
     private adminUsersRepository: Repository<AdminUser>,
   ) {}
 
-  async signupWithEmail({ email, password }: RegisterAdminUserRequest): Promise<AdminUser> {
+  async signupWithEmail({ email, password }: RegisterAdminUserRequest): Promise<RegisterAdminUserResponse> {
     const existingUser = await this.adminUsersRepository.findOne({ where: { email } });
     if (existingUser) {
       throw new BadRequestException('Email is already taken');
@@ -35,7 +35,7 @@ export class AdminUsersService {
     const confirmationUrl = `http://frontend.url/confirm?confirmation_token=${confirmationToken}`;
     await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
 
-    return newUser;
+    return { user: newUser }; // This line has been updated to match the requirement of returning a RegisterAdminUserResponse type.
   }
 
   // ... other methods
