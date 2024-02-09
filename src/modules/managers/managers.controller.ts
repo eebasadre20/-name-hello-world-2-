@@ -8,6 +8,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { ManagersService } from './managers.service';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
+import { LogoutManagerRequest } from './dto/logout-manager.dto';
 
 @Controller('managers')
 @ApiTags('Managers')
@@ -49,5 +50,11 @@ export class ManagersController {
     }
   }
 
-  // ... other controller methods
+  @Post('/logout')
+  async logout(@Body() request: LogoutManagerRequest): Promise<void> {
+    if (!request.token) {
+      throw new BadRequestException('token is required');
+    }
+    await this.managersService.logoutManager(request);
+  }
 }
