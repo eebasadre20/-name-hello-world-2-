@@ -4,10 +4,12 @@ import { Repository } from 'typeorm';
 import { AdminUser } from 'src/entities/admin_users';
 import { RegisterAdminUserRequest, RegisterAdminUserResponse, ConfirmResetPasswordRequest, SuccessResponse } from './dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
+import { LoginRequest, LoginResponse } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { sendConfirmationEmail } from './utils/email.util';
 import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt'; // Assuming JWT is used for token management
+import { generateToken } from './utils/token.util'; // Assuming custom token utility is used alongside JWT for specific cases
 
 @Injectable()
 export class AdminUsersService {
@@ -106,5 +108,36 @@ export class AdminUsersService {
     return response;
   }
 
-  // ... other methods
+  async emailLogin({ email, password }: LoginRequest): Promise<LoginResponse> {
+    const user = await this.adminUsersRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    const isPasswordMatching = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatching) {
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    if (!user.confirmed_at) {
+      throw new BadRequestException('User is not confirmed');
+    }
+
+    const accessToken = generateToken({ userId: user.id }, '24h');
+    const refreshToken = generateToken({ userId: user.id }, '48h'); // Assuming remember_in_hours is 48
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      resource_owner: 'admin_users',
+      resource_id: user.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: 'admin_users',
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: 172800, // 48 hours in seconds
+    };
+  }
+
+  // No other methods to merge, all required functionalities are included.
 }
