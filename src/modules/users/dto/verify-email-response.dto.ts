@@ -3,7 +3,7 @@ import { User } from '@entities/user'; // Assuming the User entity is exported f
 
 export type VerifyEmailResponseStatus = 'success' | 'failure';
 
-export class VerifyEmailResponse {
+export class VerifyEmailResponseDto {
   @IsString()
   status: VerifyEmailResponseStatus;
 
