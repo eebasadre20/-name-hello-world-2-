@@ -97,7 +97,8 @@ export class UsersService {
       throw new NotFoundException('User not found.');
     }
 
-    return { user };
+    // Assuming the response DTO is properly structured to match the user entity
+    return new VerifyEmailResponseDto(user);
   }
 
   async issuePasswordResetToken(requestPasswordResetDto: RequestPasswordResetDto): Promise<MessageResponseDto> {
