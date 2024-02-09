@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/users';
@@ -14,25 +14,30 @@ export class (ReplaceWithModuleName)Service {
     private emailVerificationTokensRepository: Repository<EmailVerificationToken>,
   ) {}
 
-  async verifyEmail({ user_id, token }: VerifyEmailRequest): Promise<VerifyEmailResponse> {
+  async verifyEmail({ token }: VerifyEmailRequest): Promise<VerifyEmailResponse> {
     const tokenRecord = await this.emailVerificationTokensRepository.findOne({
-      where: { user_id },
+      where: { confirmation_token: token, confirmed_at: null },
     });
 
-    if (!tokenRecord || tokenRecord.token !== token || tokenRecord.expires_at < new Date()) {
-      await this.emailVerificationTokensRepository.delete({ user_id });
-      return {
-        message: 'Verification failed. The token is invalid or has expired.',
-        next_steps: 'Please request a new verification email.',
-      };
+    if (!tokenRecord) {
+      throw new BadRequestException('Confirmation token is not valid');
     }
 
-    await this.usersRepository.update(user_id, { email_verified: true });
-    await this.emailVerificationTokensRepository.delete({ user_id });
+    const emailExpiredInHours = {{email_expired_in}}; // Replace {{email_expired_in}} with actual value
+    const expirationDate = new Date(tokenRecord.confirmation_sent_at);
+    expirationDate.setHours(expirationDate.getHours() + emailExpiredInHours);
 
-    return {
-      message: 'Email verification successful. You can now log in.',
-    };
+    if (new Date() > expirationDate) {
+      throw new BadRequestException('Confirmation token is expired');
+    }
+
+    await this.usersRepository.update(tokenRecord.user_id, { confirmed_at: new Date() });
+
+    const updatedUser = await this.usersRepository.findOne({
+      where: { id: tokenRecord.user_id },
+    });
+
+    return { user: updatedUser };
   }
 
   // ... other methods ...
