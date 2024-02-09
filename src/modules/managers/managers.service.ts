@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Manager } from 'src/entities/managers';
 import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
+import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { LogoutManagerRequest } from './dto/logout-manager.dto';
@@ -43,6 +44,47 @@ export class ManagersService {
     await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
 
     return { user: manager };
+  }
+
+  async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
+    const { refresh_token, scope } = request;
+
+    let decodedToken;
+    try {
+      decodedToken = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+    } catch (error) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    const managerId = decodedToken.sub;
+    const managerScope = decodedToken.scope;
+
+    if (scope !== managerScope) {
+      throw new BadRequestException('Scope mismatch');
+    }
+
+    const newAccessToken = jwt.sign({ sub: managerId, scope: scope }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const newRefreshToken = jwt.sign({ sub: managerId, scope: scope }, process.env.JWT_REFRESH_SECRET, { expiresIn: `${request.remember_in_hours}h` });
+
+    const manager = await this.managersRepository.findOne({ where: { id: managerId } });
+
+    if (!manager) {
+      throw new BadRequestException('Manager not found');
+    }
+
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400,
+      token_type: 'Bearer',
+      scope: scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: request.remember_in_hours * 3600,
+    };
+
+    return response;
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<ConfirmResetPasswordResponse> {
@@ -120,8 +162,8 @@ export class ManagersService {
     manager.failed_attempts = 0;
     await this.managersRepository.save(manager);
 
-    const accessToken = jwt.sign({ id: manager.id, email: manager.email }, 'secret', { expiresIn: '24h' });
-    const refreshToken = jwt.sign({ id: manager.id, email: manager.email }, 'refreshSecret', { expiresIn: '48h' });
+    const accessToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const refreshToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_REFRESH_SECRET, { expiresIn: '48h' });
 
     return {
       access_token: accessToken,
