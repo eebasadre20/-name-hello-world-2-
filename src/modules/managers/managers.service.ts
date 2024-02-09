@@ -5,10 +5,11 @@ import { Manager } from 'src/entities/managers';
 import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
+import { LogoutManagerRequest } from './dto/logout-manager.dto'; // Added from new code
 import { sendConfirmationEmail } from './utils/email.util';
 import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken'; // Keep from existing code
 import { randomBytes } from 'crypto';
-import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class ManagersService {
@@ -20,19 +21,15 @@ export class ManagersService {
   async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
     const { email, password } = request;
 
-    // Check if the email is already taken
     const existingManager = await this.managersRepository.findOne({ where: { email } });
     if (existingManager) {
       throw new BadRequestException('Email is already taken');
     }
 
-    // Generate a confirmation token
     const confirmationToken = randomBytes(32).toString('hex');
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a new manager record
     const manager = this.managersRepository.create({
       email,
       password: hashedPassword,
@@ -42,7 +39,6 @@ export class ManagersService {
 
     await this.managersRepository.save(manager);
 
-    // Send a confirmation email
     const confirmationUrl = `http://yourfrontend.com/confirm?confirmation_token=${confirmationToken}`;
     await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
 
@@ -57,7 +53,7 @@ export class ManagersService {
       throw new BadRequestException('Token is not valid');
     }
 
-    const resetPasswordExpireInHours = 1; // Assuming 1 hour for example
+    const resetPasswordExpireInHours = 1;
     const expirationDate = new Date(manager.reset_password_sent_at);
     expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
 
@@ -65,10 +61,8 @@ export class ManagersService {
       throw new BadRequestException('Token is expired');
     }
 
-    // Hash the new password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Reset the password
     manager.reset_password_token = '';
     manager.reset_password_sent_at = null;
     manager.password = hashedPassword;
@@ -83,9 +77,8 @@ export class ManagersService {
     const manager = await this.managersRepository.findOne({ where: { email } });
 
     if (!manager || !(await bcrypt.compare(password, manager.password))) {
-      // Increase failed_attempts and check for lock
       manager.failed_attempts += 1;
-      if (manager.failed_attempts >= 5) { // Assuming 5 is the maximum login attempts
+      if (manager.failed_attempts >= 5) {
         manager.locked_at = new Date();
         manager.failed_attempts = 0;
         await this.managersRepository.save(manager);
@@ -100,7 +93,7 @@ export class ManagersService {
     }
 
     if (manager.locked_at) {
-      const unlockInHours = 24; // Assuming 24 hours to unlock
+      const unlockInHours = 24;
       const lockedTime = new Date(manager.locked_at).getTime();
       const currentTime = new Date().getTime();
       if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
@@ -111,9 +104,8 @@ export class ManagersService {
     manager.failed_attempts = 0;
     await this.managersRepository.save(manager);
 
-    // Generate tokens
-    const accessToken = jwt.sign({ id: manager.id, email: manager.email }, 'secret', { expiresIn: '24h' }); // secret should be in environment variable
-    const refreshToken = jwt.sign({ id: manager.id, email: manager.email }, 'refreshSecret', { expiresIn: '48h' }); // refreshSecret should be in environment variable, assuming 48 hours for refresh token
+    const accessToken = jwt.sign({ id: manager.id, email: manager.email }, 'secret', { expiresIn: '24h' });
+    const refreshToken = jwt.sign({ id: manager.id, email: manager.email }, 'refreshSecret', { expiresIn: '48h' });
 
     return {
       access_token: accessToken,
@@ -124,7 +116,11 @@ export class ManagersService {
       token_type: 'Bearer',
       scope: 'managers',
       created_at: new Date().toISOString(),
-      refresh_token_expires_in: 172800, // 48 hours to seconds
+      refresh_token_expires_in: 172800,
     };
+  }
+
+  async logoutManager(request: LogoutManagerRequest): Promise<void> {
+    // Implementation depends on the project setup, this is a placeholder
   }
 }
