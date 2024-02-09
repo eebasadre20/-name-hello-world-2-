@@ -5,11 +5,14 @@ import { AdminUser } from 'src/entities/admin_users';
 import { RegisterAdminUserRequest, RegisterAdminUserResponse, ConfirmResetPasswordRequest, SuccessResponse } from './dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
+import { LogoutAdminUserRequest, LogoutAdminUserResponse } from './dto/logout-admin-user.dto';
 import * as bcrypt from 'bcrypt';
 import { sendConfirmationEmail } from './utils/email.util';
 import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt'; // Assuming JWT is used for token management
 import { generateToken } from './utils/token.util'; // Assuming custom token utility is used alongside JWT for specific cases
+// Assuming Passport is used for authentication and token management
+import { PassportService } from 'src/auth/passport.service';
 
 @Injectable()
 export class AdminUsersService {
@@ -17,6 +20,7 @@ export class AdminUsersService {
     @InjectRepository(AdminUser)
     private adminUsersRepository: Repository<AdminUser>,
     private jwtService: JwtService, // Inject JwtService, added from new code
+    private passportService: PassportService, // Injected PassportService for token management
   ) {}
 
   async signupWithEmail({ email, password }: RegisterAdminUserRequest): Promise<RegisterAdminUserResponse> {
@@ -139,5 +143,16 @@ export class AdminUsersService {
     };
   }
 
-  // No other methods to merge, all required functionalities are included.
+  async logoutAdminUser({ token, token_type_hint }: LogoutAdminUserRequest): Promise<LogoutAdminUserResponse> {
+    try {
+      // Utilize the PassportService to invalidate or blacklist the token
+      const result = await this.passportService.invalidateToken(token, token_type_hint);
+      if (!result) {
+        throw new BadRequestException('Invalid token or token type');
+      }
+      return { status: 200 };
+    } catch (error) {
+      throw new BadRequestException('Logout failed');
+    }
+  }
 }
