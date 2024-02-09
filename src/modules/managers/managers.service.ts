@@ -5,10 +5,10 @@ import { Manager } from 'src/entities/managers';
 import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
-import { LogoutManagerRequest } from './dto/logout-manager.dto'; // Added from new code
-import { sendConfirmationEmail } from './utils/email.util';
+import { LogoutManagerRequest } from './dto/logout-manager.dto';
+import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util';
 import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken'; // Keep from existing code
+import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 
 @Injectable()
@@ -72,6 +72,22 @@ export class ManagersService {
     return { message: 'Password reset successfully' };
   }
 
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetUrl);
+    }
+
+    return { message: "Success" };
+  }
+
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
     const { email, password } = request;
     const manager = await this.managersRepository.findOne({ where: { email } });
@@ -123,4 +139,6 @@ export class ManagersService {
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     // Implementation depends on the project setup, this is a placeholder
   }
+
+  // ... other service methods
 }
