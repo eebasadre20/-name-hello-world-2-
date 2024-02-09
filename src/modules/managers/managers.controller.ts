@@ -1,17 +1,25 @@
-import {
-  Body,
-  Controller,
-  Post,
-  BadRequestException,
-} from '@nestjs/common';
+import { Body, Controller, Post, BadRequestException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ManagersService } from './managers.service';
+import { RequestPasswordResetRequest } from './dto/request-password-reset.dto';
 import { ConfirmResetPasswordRequest } from './dto/confirm-reset-password.dto';
 
 @Controller('/api/managers')
 @ApiTags('Managers')
 export class ManagersController {
   constructor(private readonly managersService: ManagersService) {}
+
+  @Post('/request-password-reset')
+  async requestPasswordReset(@Body() request: RequestPasswordResetRequest): Promise<{ message: string }> {
+    if (!request.email) {
+      throw new BadRequestException('email is required');
+    }
+    const emailRegex = /\S+@\S+\.\S+/;
+    if (!emailRegex.test(request.email)) {
+      throw new BadRequestException('Email is invalid');
+    }
+    return this.managersService.requestPasswordReset(request.email);
+  }
 
   @Post('/reset-password-confirm')
   async confirmResetPassword(@Body() body: ConfirmResetPasswordRequest) {
@@ -42,6 +50,4 @@ export class ManagersController {
 
     return this.managersService.confirmResetPassword({ token: reset_token, password });
   }
-
-  // ... other controller methods
 }
