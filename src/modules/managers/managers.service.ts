@@ -3,11 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Manager } from 'src/entities/managers';
 import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
+import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { sendConfirmationEmail } from './utils/email.util';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-import * as jwt from 'jsonwebtoken'; // Assuming JWT is used for token generation
+import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class ManagersService {
@@ -46,6 +47,35 @@ export class ManagersService {
     await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
 
     return { user: manager };
+  }
+
+  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<ConfirmResetPasswordResponse> {
+    const { token, password } = request;
+
+    const manager = await this.managersRepository.findOne({ where: { reset_password_token: token } });
+    if (!manager) {
+      throw new BadRequestException('Token is not valid');
+    }
+
+    const resetPasswordExpireInHours = 1; // Assuming 1 hour for example
+    const expirationDate = new Date(manager.reset_password_sent_at);
+    expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
+
+    if (new Date() > expirationDate) {
+      throw new BadRequestException('Token is expired');
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Reset the password
+    manager.reset_password_token = '';
+    manager.reset_password_sent_at = null;
+    manager.password = hashedPassword;
+
+    await this.managersRepository.save(manager);
+
+    return { message: 'Password reset successfully' };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
@@ -97,6 +127,4 @@ export class ManagersService {
       refresh_token_expires_in: 172800, // 48 hours to seconds
     };
   }
-
-  // ... rest of the service methods
 }
