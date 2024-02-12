@@ -135,7 +135,7 @@ export class ManagersService {
       throw new BadRequestException('Confirmation token is not valid');
     }
 
-    const isTokenExpired = validateTokenExpiration(manager.confirmation_sent_at, 24); // Assuming 24 is the {{email_expired_in}} value. Replace it with the actual value from your project configuration.
+    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, 24); // Assuming 24 is the {{email_expired_in}} value. Replace it with the actual value from your project configuration. Note the negation to match the function's return logic.
     if (isTokenExpired) {
       throw new BadRequestException('Confirmation token is expired');
     }
