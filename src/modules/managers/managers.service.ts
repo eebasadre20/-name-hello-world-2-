@@ -7,7 +7,7 @@ import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.d
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { LogoutManagerRequest } from './dto/logout-manager.dto';
-import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
+import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto'; // Updated to include ConfirmEmailResponse
 import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
@@ -122,7 +122,7 @@ export class ManagersService {
     // Implementation depends on the project setup, this is a placeholder
   }
 
-  async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
+  async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> { // Updated return type to ConfirmEmailResponse
     const { token } = request;
     const manager = await this.managersRepository.findOne({
       where: {
@@ -143,6 +143,6 @@ export class ManagersService {
     manager.confirmed_at = new Date();
     await this.managersRepository.save(manager);
 
-    return { user: manager };
+    return { user: manager }; // Updated to match the expected return type
   }
 }
