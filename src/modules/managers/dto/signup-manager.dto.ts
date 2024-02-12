@@ -7,10 +7,10 @@ export class SignupManagerRequest {
 
   @IsString({ message: 'Password must be a string' })
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
-  @Matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/, { message: 'Password is invalid' })
+  @Matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/, { message: 'Password must contain at least one letter and one number' })
   password: string;
 }
 
-export class ManagerResponse {
+export class SignupManagerResponse {
   user: Manager;
 }

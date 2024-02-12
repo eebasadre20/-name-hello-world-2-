@@ -21,8 +21,29 @@ export class ManagersService {
     private managersRepository: Repository<Manager>,
   ) {}
 
-  async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
-    // Existing signupManager code
+  async signupWithEmail(request: SignupManagerRequest): Promise<SignupManagerResponse> {
+    const { email, password } = request;
+
+    const existingManager = await this.managersRepository.findOne({ where: { email } });
+    if (existingManager) {
+      throw new BadRequestException('Email is already taken');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const confirmationToken = randomBytes(32).toString('hex');
+
+    const manager = this.managersRepository.create({
+      email,
+      password: hashedPassword,
+      confirmation_token: confirmationToken,
+      confirmed_at: null,
+    });
+
+    await this.managersRepository.save(manager);
+
+    await sendConfirmationEmail(email, confirmationToken);
+
+    return { user: manager };
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
