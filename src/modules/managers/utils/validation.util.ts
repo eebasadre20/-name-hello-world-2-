@@ -1,7 +1,7 @@
 export function validateTokenExpiration(sentAt: Date, expiresInHours: number): boolean {
   const expirationDate = new Date(sentAt);
   expirationDate.setHours(expirationDate.getHours() + expiresInHours);
-  return new Date() < expirationDate; // Correctly return true if the current time is before the expiration date
+  return new Date() > expirationDate; // Correctly return true if the current time is after the expiration date, indicating the token is expired
 }
 
 export function validateToken(token: string): boolean {

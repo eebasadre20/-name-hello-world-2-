@@ -41,7 +41,6 @@ export class ManagersService {
 
     await this.managersRepository.save(manager);
 
-    // Assuming the confirmation URL is something like 'http://yourfrontend.com/confirm-email'
     const confirmationUrl = `http://yourfrontend.com/confirm-email?confirmation_token=${confirmationToken}`;
     await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
 
