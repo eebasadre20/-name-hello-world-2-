@@ -12,7 +12,9 @@ export class SignupManagerRequest {
   @IsNotEmpty({ message: 'Password is required' })
   password: string;
 
-  // Removed the password_confirmation field as it is not mentioned in the requirement for the SignupManagerRequest DTO
+  @IsString({ message: 'Password confirmation is required' })
+  @IsNotEmpty({ message: 'Password confirmation is required' })
+  password_confirmation: string; // Added this field back as it is used in the controller's validation logic
 }
 
 export class SignupManagerResponse {
