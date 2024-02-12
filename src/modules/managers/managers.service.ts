@@ -21,7 +21,7 @@ export class ManagersService {
     private managersRepository: Repository<Manager>,
   ) {}
 
-  async signupWithEmail(request: SignupManagerRequest): Promise<SignupManagerResponse> {
+  async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
     const { email, password } = request;
 
     const existingManager = await this.managersRepository.findOne({ where: { email } });
@@ -79,8 +79,8 @@ export class ManagersService {
       throw new BadRequestException('Confirmation token is not valid');
     }
 
-    const isTokenValid = validateTokenExpiration(manager.confirmation_sent_at, 24); // Assuming {{email_expired_in}} is 24 hours
-    if (!isTokenValid) {
+    const isTokenExpired = validateTokenExpiration(manager.confirmation_sent_at, 24); // Replace 24 with actual value if different
+    if (isTokenExpired) {
       throw new BadRequestException('Confirmation token is expired');
     }
 
@@ -90,5 +90,5 @@ export class ManagersService {
     return manager;
   }
 
-  // ... other service methods
+  // Other service methods remain unchanged
 }
