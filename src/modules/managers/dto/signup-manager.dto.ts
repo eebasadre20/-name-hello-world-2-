@@ -11,6 +11,10 @@ export class SignupManagerRequest {
   @Matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/, { message: 'Password must contain at least one letter and one number' })
   @IsNotEmpty({ message: 'Password is required' })
   password: string;
+
+  @IsString({ message: 'Password confirmation is required' })
+  @IsNotEmpty({ message: 'Password confirmation is required' })
+  password_confirmation: string; // Added this field to match the controller's expected fields
 }
 
 export class SignupManagerResponse {
