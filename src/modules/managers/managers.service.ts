@@ -55,15 +55,71 @@ export class ManagersService {
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string }> {
-    // Existing requestPasswordReset code
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetUrl);
+    }
+
+    return { message: "Success" };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
-    // Existing loginManager code
+    const { email, password } = request;
+    const manager = await this.managersRepository.findOne({ where: { email } });
+
+    if (!manager || !(await bcrypt.compare(password, manager.password))) {
+      manager.failed_attempts += 1;
+      if (manager.failed_attempts >= 5) {
+        manager.locked_at = new Date();
+        manager.failed_attempts = 0;
+        await this.managersRepository.save(manager);
+        throw new BadRequestException('User is locked');
+      }
+      await this.managersRepository.save(manager);
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    if (!manager.confirmed_at) {
+      throw new BadRequestException('User is not confirmed');
+    }
+
+    if (manager.locked_at) {
+      const unlockInHours = 24;
+      const lockedTime = new Date(manager.locked_at).getTime();
+      const currentTime = new Date().getTime();
+      if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
+        throw new BadRequestException('User is locked');
+      }
+    }
+
+    manager.failed_attempts = 0;
+    await this.managersRepository.save(manager);
+
+    const accessToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const refreshToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_REFRESH_SECRET, { expiresIn: '48h' });
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400,
+      token_type: 'Bearer',
+      scope: 'managers',
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: 172800,
+    };
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
-    // Existing logoutManager code
+    // Implementation depends on the project setup, this is a placeholder
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<Manager> {
@@ -79,7 +135,7 @@ export class ManagersService {
       throw new BadRequestException('Confirmation token is not valid');
     }
 
-    const isTokenExpired = validateTokenExpiration(manager.confirmation_sent_at, 24); // Replace 24 with actual value if different
+    const isTokenExpired = validateTokenExpiration(manager.confirmation_sent_at, 24); // Assuming 24 is the {{email_expired_in}} value. Replace it with the actual value from your project configuration.
     if (isTokenExpired) {
       throw new BadRequestException('Confirmation token is expired');
     }
@@ -89,6 +145,4 @@ export class ManagersService {
 
     return manager;
   }
-
-  // Other service methods remain unchanged
 }
