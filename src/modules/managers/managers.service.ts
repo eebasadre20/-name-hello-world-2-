@@ -145,4 +145,6 @@ export class ManagersService {
 
     return { user: manager }; // Updated to match the expected return type
   }
+
+  // ... other service methods
 }

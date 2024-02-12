@@ -13,6 +13,6 @@ export class SignupManagerRequest {
   password: string;
 }
 
-export class ManagerResponse {
+export class SignupManagerResponse {
   user: Manager;
 }
