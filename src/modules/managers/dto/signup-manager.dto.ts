@@ -11,6 +11,6 @@ export class SignupManagerRequest {
   password: string;
 }
 
-export class SignupManagerResponse {
+export class ManagerResponse {
   user: Manager;
 }
