@@ -52,20 +52,24 @@ export class ManagersService {
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
     const { refresh_token, scope } = request;
 
+    // Verify the refresh token
     try {
       jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
     } catch (error) {
       throw new BadRequestException('Refresh token is not valid');
     }
 
-    const newAccessToken = generateAccessToken({ scope }, '24h'); // Updated to use generateAccessToken utility
-    const newRefreshToken = generateRefreshToken({ scope }, request.remember_in_hours); // Updated to use generateRefreshToken utility
+    // Generate new tokens
+    const newAccessToken = generateAccessToken({ scope }); // Assuming generateAccessToken utilizes JWT_SECRET and sets expiresIn to '24h'
+    const newRefreshToken = generateRefreshToken({ scope }, request.remember_in_hours); // Assuming generateRefreshToken utilizes JWT_REFRESH_SECRET
 
+    // Assuming manager identification from refresh token is handled elsewhere
     const manager = await this.managersRepository.findOne({ where: { /* logic to find manager based on refresh_token */ } });
     if (!manager) {
       throw new BadRequestException('Manager not found');
     }
 
+    // Construct response
     const response: RefreshTokenResponse = {
       access_token: newAccessToken,
       refresh_token: newRefreshToken,
@@ -89,7 +93,7 @@ export class ManagersService {
       throw new BadRequestException('Token is not valid');
     }
 
-    const resetPasswordExpireInHours = 1; // This value should be replaced with the actual value from your project configuration
+    const resetPasswordExpireInHours = 1;
     const expirationDate = new Date(manager.reset_password_sent_at);
     expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
 
@@ -156,8 +160,8 @@ export class ManagersService {
     manager.failed_attempts = 0;
     await this.managersRepository.save(manager);
 
-    const accessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h'); // Updated to use generateAccessToken utility
-    const refreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, 48); // Updated to use generateRefreshToken utility
+    const accessToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const refreshToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_REFRESH_SECRET, { expiresIn: '48h' });
 
     return {
       access_token: accessToken,
