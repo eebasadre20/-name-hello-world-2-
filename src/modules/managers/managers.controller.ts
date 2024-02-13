@@ -51,4 +51,6 @@ export class ManagersController {
     }
     await this.managersService.logoutManager(logoutManagerRequest);
   }
+
+  // No changes to other methods, they remain as is
 }
