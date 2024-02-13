@@ -12,7 +12,7 @@ export class SignupManagerRequest {
   @IsNotEmpty({ message: 'Password is required' })
   password: string;
 
-  @IsString({ message: 'Password confirmation must be a string' }) // Updated to include "must be a string" for consistency with the password field validation message
+  @IsString({ message: 'Password confirmation must be a string' })
   @IsNotEmpty({ message: 'Password confirmation is required' })
   password_confirmation: string; // Added password_confirmation field to match the controller's validation logic
 }
