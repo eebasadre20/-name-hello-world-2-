@@ -11,6 +11,4 @@ export class LogoutManagerRequest {
   token_type_hint: string;
 }
 
-export class LogoutManagerResponse {
-  message?: string;
-}
+// Removed the LogoutManagerResponse class as it is not used in the controller code.
