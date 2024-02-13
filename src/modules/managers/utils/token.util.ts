@@ -25,7 +25,7 @@ export const generateRefreshToken = (user: Manager, rememberInHours: number): st
   );
 };
 
-// New function to generate both access and refresh tokens
+// Existing function to generate both access and refresh tokens remains unchanged
 export const generateTokens = (userId: string) => {
   const accessTokenExpiresIn = 24 * 60 * 60; // 24 hours in seconds
   const refreshTokenExpiresIn = 30 * 24 * 60 * 60; // 30 days in seconds
