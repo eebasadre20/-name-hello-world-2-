@@ -26,7 +26,7 @@ export class EmailUtil {
   }
 
   async sendPasswordResetEmail(email: string, token: string, name: string = "User"): Promise<void> {
-    const passwordResetUrl = `http://yourfrontend.com/reset-password?token=${token}`;
+    const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${token}`; // Updated the query parameter to match the requirement
     try {
       await this.mailerService.sendMail({
         to: email,

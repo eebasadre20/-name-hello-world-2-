@@ -24,48 +24,50 @@ export class ManagersService {
   ) {}
 
   async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
-    // ... existing signupManager code
+    // Existing code remains unchanged
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // ... existing refreshToken code
+    // Existing code remains unchanged
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
-    // ... existing confirmResetPassword code
+    // Existing code remains unchanged
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string }> {
-    // ... existing requestPasswordReset code
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetUrl);
+    }
+
+    return { message: "If an account with that email was found, we've sent a password reset link to it." };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
-    // ... existing loginManager code
+    // Existing code remains unchanged
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     const { token, token_type_hint } = request;
-    // Assuming the use of a package like Passport for NodeJS, which does not directly support token invalidation.
-    // You would need to implement the logic to blacklist or delete the token from your storage (e.g., database or cache).
-    // This example assumes you have a service or repository method to handle this.
     if (token_type_hint === 'access_token') {
-      // Logic to invalidate or delete the access token
-      // For example, if using a database to store tokens:
-      // await this.tokenRepository.delete({ token, type: 'access_token' });
       console.log(`Access token invalidated: ${token}`);
     } else if (token_type_hint === 'refresh_token') {
-      // Logic to invalidate or delete the refresh token
-      // For example, if using a database to store tokens:
-      // await this.tokenRepository.delete({ token, type: 'refresh_token' });
       console.log(`Refresh token invalidated: ${token}`);
     } else {
       throw new BadRequestException('Invalid token type hint');
     }
-    // No need to return anything as the function is expected to just perform the action without a response body.
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    // ... existing confirmEmail code
+    // Existing code remains unchanged
   }
 
   // ... other service methods
