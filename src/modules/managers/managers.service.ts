@@ -13,6 +13,8 @@ import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import { validateTokenExpiration } from './utils/validation.util';
+import { comparePassword } from './utils/password.util';
+import { generateAccessToken, generateRefreshToken } from './utils/token.util';
 
 @Injectable()
 export class ManagersService {
@@ -123,18 +125,27 @@ export class ManagersService {
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
-    const { email, password } = request;
-    const manager = await this.managersRepository.findOne({ where: { email } });
+    // Validate input
+    if (!request.email || !request.password) {
+      throw new BadRequestException('Email and password are required');
+    }
 
-    if (!manager || !(await bcrypt.compare(password, manager.password))) {
+    const manager = await this.managersRepository.findOne({ where: { email: request.email } });
+
+    if (!manager) {
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    const isPasswordValid = await comparePassword(request.password, manager.password);
+    if (!isPasswordValid) {
       manager.failed_attempts += 1;
+      await this.managersRepository.save(manager);
       if (manager.failed_attempts >= 5) {
         manager.locked_at = new Date();
         manager.failed_attempts = 0;
         await this.managersRepository.save(manager);
         throw new BadRequestException('User is locked');
       }
-      await this.managersRepository.save(manager);
       throw new BadRequestException('Email or password is not valid');
     }
 
@@ -143,30 +154,32 @@ export class ManagersService {
     }
 
     if (manager.locked_at) {
-      const unlockInHours = 24;
+      const unlockInHours = 24; // Assuming 24 is the unlock_in_hours value. Replace it with the actual value from your project configuration.
       const lockedTime = new Date(manager.locked_at).getTime();
       const currentTime = new Date().getTime();
       if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
         throw new BadRequestException('User is locked');
+      } else {
+        manager.locked_at = null; // Unlock the manager
       }
     }
 
     manager.failed_attempts = 0;
     await this.managersRepository.save(manager);
 
-    const accessToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
-    const refreshToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_REFRESH_SECRET, { expiresIn: '48h' });
+    const accessToken = generateAccessToken({ id: manager.id, email: manager.email });
+    const refreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, 48); // Assuming 48 is the remember_in_hours value. Replace it with the actual value from your project configuration.
 
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
       resource_owner: 'managers',
       resource_id: manager.id.toString(),
-      expires_in: 86400,
+      expires_in: 86400, // 24 hours in seconds
       token_type: 'Bearer',
       scope: 'managers',
       created_at: new Date().toISOString(),
-      refresh_token_expires_in: 172800,
+      refresh_token_expires_in: 172800, // 48 hours in seconds
     };
   }
 

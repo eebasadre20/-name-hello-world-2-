@@ -12,13 +12,14 @@ export function validateToken(token: string): boolean {
 
 export function validateLoginInput(email: string, password: string): void {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/; // Minimum eight characters, at least one letter and one number
+  // Updated password pattern to enforce a minimum of 8 characters, at least one letter, one number, and one special character
+  const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
   if (!emailPattern.test(email)) {
     throw new Error('Invalid email format');
   }
 
   if (!passwordPattern.test(password)) {
-    throw new Error('Password must be at least 8 characters long and contain at least one letter and one number');
+    throw new Error('Password must be at least 8 characters long and contain at least one letter, one number, and one special character');
   }
 }
