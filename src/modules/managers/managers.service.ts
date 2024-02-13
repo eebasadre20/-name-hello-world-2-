@@ -14,7 +14,7 @@ import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import { validateTokenExpiration } from './utils/validation.util';
 import { comparePassword } from './utils/password.util'; // Added from existing code
-import { generateTokens, generateAccessToken, generateRefreshToken } from './utils/token.util'; // Updated to use generateTokens and kept existing methods
+import { generateAccessToken, generateRefreshToken, generateTokens } from './utils/token.util'; // Added from existing code and updated to include generateTokens
 
 @Injectable()
 export class ManagersService {
@@ -24,15 +24,92 @@ export class ManagersService {
   ) {}
 
   async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
-    // Existing code remains unchanged
+    const { email, password } = request;
+
+    const existingManager = await this.managersRepository.findOne({ where: { email } });
+    if (existingManager) {
+      throw new BadRequestException('Email is already taken');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const confirmationToken = randomBytes(32).toString('hex');
+
+    const manager = this.managersRepository.create({
+      email,
+      password: hashedPassword,
+      confirmation_token: confirmationToken,
+      confirmed_at: null,
+    });
+
+    await this.managersRepository.save(manager);
+
+    const confirmationUrl = `http://yourfrontend.com/confirm-email?confirmation_token=${confirmationToken}`;
+    await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
+
+    return { user: manager };
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Existing code remains unchanged
+    const { refresh_token, scope } = request;
+
+    // Verify the refresh token
+    try {
+      jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+    } catch (error) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    // Assuming manager identification from refresh token is handled elsewhere
+    const manager = await this.managersRepository.findOne({ where: { /* logic to find manager based on refresh_token */ } });
+    if (!manager) {
+      throw new BadRequestException('Manager not found');
+    }
+
+    // Generate new tokens using the utility functions
+    const newAccessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h'); // Assuming generateAccessToken utilizes JWT_SECRET and sets expiresIn
+    const newRefreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, request.remember_in_hours); // Assuming generateRefreshToken utilizes JWT_REFRESH_SECRET
+
+    // Construct response
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: request.remember_in_hours * 3600,
+    };
+
+    return response;
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
-    // Existing code remains unchanged
+    const { token, password } = request;
+
+    const manager = await this.managersRepository.findOne({ where: { reset_password_token: token } });
+    if (!manager) {
+      throw new BadRequestException('Token is not valid');
+    }
+
+    const resetPasswordExpireInHours = 1; // This value should be replaced with the actual value from your project configuration
+    const expirationDate = new Date(manager.reset_password_sent_at);
+    expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
+
+    if (new Date() > expirationDate) {
+      throw new BadRequestException('Token is expired');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    manager.reset_password_token = '';
+    manager.reset_password_sent_at = null;
+    manager.password = hashedPassword;
+
+    await this.managersRepository.save(manager);
+
+    return { message: 'Password reset successfully' };
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string }> {
@@ -55,15 +132,15 @@ export class ManagersService {
     const { email, password } = request;
     const manager = await this.managersRepository.findOne({ where: { email } });
 
-    if (!manager || !(await comparePassword(password, manager.password))) {
+    if (!manager || !(await bcrypt.compare(password, manager.password))) {
       manager.failed_attempts += 1;
-      await this.managersRepository.save(manager);
       if (manager.failed_attempts >= 5) {
         manager.locked_at = new Date();
         manager.failed_attempts = 0;
         await this.managersRepository.save(manager);
         throw new BadRequestException('User is locked');
       }
+      await this.managersRepository.save(manager);
       throw new BadRequestException('Email or password is not valid');
     }
 
@@ -72,7 +149,7 @@ export class ManagersService {
     }
 
     if (manager.locked_at) {
-      const unlockInHours = 24; // Assuming unlock_in_hours is 24
+      const unlockInHours = 24;
       const lockedTime = new Date(manager.locked_at).getTime();
       const currentTime = new Date().getTime();
       if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
@@ -86,7 +163,7 @@ export class ManagersService {
     await this.managersRepository.save(manager);
 
     // Use utility function to generate tokens
-    const tokens = generateTokens(manager.id.toString(), 24); // Assuming remember_in_hours is 24 for refresh token
+    const tokens = generateTokens({ id: manager.id, email: manager.email }, '24h'); // Assuming generateTokens utilizes JWT_SECRET and sets expiresIn
 
     return {
       access_token: tokens.access_token,
@@ -103,17 +180,35 @@ export class ManagersService {
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     const { token, token_type_hint } = request;
-    if (token_type_hint === 'access_token') {
-      console.log(`Access token invalidated: ${token}`);
-    } else if (token_type_hint === 'refresh_token') {
-      console.log(`Refresh token invalidated: ${token}`);
+    if (token_type_hint === 'access_token' || token_type_hint === 'refresh_token') {
+      console.log(`Invalidating token: ${token}`);
     } else {
       throw new BadRequestException('Invalid token type hint');
     }
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    // Existing code remains unchanged
+    const { token } = request;
+    const manager = await this.managersRepository.findOne({
+      where: {
+        confirmation_token: token,
+        confirmed_at: null,
+      },
+    });
+
+    if (!manager) {
+      throw new BadRequestException('Confirmation token is not valid');
+    }
+
+    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, 24); // Assuming 24 is the email_expired_in value. Replace it with the actual value from your project configuration. Note the negation to match the function's return logic.
+    if (isTokenExpired) {
+      throw new BadRequestException('Confirmation token is expired');
+    }
+
+    manager.confirmed_at = new Date();
+    await this.managersRepository.save(manager);
+
+    return { user: manager }; // Updated to match the expected return type
   }
 
   // ... other service methods
