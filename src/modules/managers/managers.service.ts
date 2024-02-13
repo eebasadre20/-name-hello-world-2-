@@ -59,9 +59,9 @@ export class ManagersService {
       throw new BadRequestException('Refresh token is not valid');
     }
 
-    // Generate new tokens
-    const newAccessToken = generateAccessToken({ scope }); // Assuming generateAccessToken utilizes JWT_SECRET and sets expiresIn to '24h'
-    const newRefreshToken = generateRefreshToken({ scope }, request.remember_in_hours); // Assuming generateRefreshToken utilizes JWT_REFRESH_SECRET
+    // Generate new tokens using the utility functions
+    const newAccessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h'); // Assuming generateAccessToken utilizes JWT_SECRET and sets expiresIn
+    const newRefreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, request.remember_in_hours); // Assuming generateRefreshToken utilizes JWT_REFRESH_SECRET
 
     // Assuming manager identification from refresh token is handled elsewhere
     const manager = await this.managersRepository.findOne({ where: { /* logic to find manager based on refresh_token */ } });
@@ -160,8 +160,9 @@ export class ManagersService {
     manager.failed_attempts = 0;
     await this.managersRepository.save(manager);
 
-    const accessToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
-    const refreshToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_REFRESH_SECRET, { expiresIn: '48h' });
+    // Use utility functions to generate tokens
+    const accessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h'); // Assuming generateAccessToken utilizes JWT_SECRET and sets expiresIn
+    const refreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, 48); // Assuming generateRefreshToken utilizes JWT_REFRESH_SECRET and sets expiresIn to '48h'
 
     return {
       access_token: accessToken,
@@ -179,7 +180,7 @@ export class ManagersService {
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     const { token, token_type_hint } = request;
     if (token_type_hint === 'access_token' || token_type_hint === 'refresh_token') {
-      console.log(`Blacklisting token: ${token}`);
+      console.log(`Invalidating token: ${token}`);
     } else {
       throw new BadRequestException('Invalid token type hint');
     }
