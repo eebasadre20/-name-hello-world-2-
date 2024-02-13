@@ -23,3 +23,8 @@ export function validateLoginInput(email: string, password: string): void {
     throw new Error('Password must be at least 8 characters long and contain at least one letter, one number, and one special character');
   }
 }
+
+export function validateEmail(email: string): boolean {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailPattern.test(email);
+}
