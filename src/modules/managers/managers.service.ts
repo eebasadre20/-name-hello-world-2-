@@ -100,13 +100,13 @@ export class ManagersService {
 
     if (!manager || !(await bcrypt.compare(password, manager.password))) {
       manager.failed_attempts += 1;
+      await this.managersRepository.save(manager);
       if (manager.failed_attempts >= 5) {
         manager.locked_at = new Date();
         manager.failed_attempts = 0;
         await this.managersRepository.save(manager);
         throw new BadRequestException('User is locked');
       }
-      await this.managersRepository.save(manager);
       throw new BadRequestException('Email or password is not valid');
     }
 
@@ -115,7 +115,7 @@ export class ManagersService {
     }
 
     if (manager.locked_at) {
-      const unlockInHours = 24;
+      const unlockInHours = 24; // Assuming 24 is the unlock_in_hours value. Replace it with the actual value from your project configuration.
       const lockedTime = new Date(manager.locked_at).getTime();
       const currentTime = new Date().getTime();
       if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
@@ -170,7 +170,7 @@ export class ManagersService {
       throw new BadRequestException('Confirmation token is not valid');
     }
 
-    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, 24); // Assuming 24 is the {{email_expired_in}} value. Replace it with the actual value from your project configuration. Note the negation to match the function's return logic.
+    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, 24); // Assuming 24 is the email_expired_in value. Replace it with the actual value from your project configuration. Note the negation to match the function's return logic.
     if (isTokenExpired) {
       throw new BadRequestException('Confirmation token is expired');
     }
