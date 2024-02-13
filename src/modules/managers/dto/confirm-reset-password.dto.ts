@@ -12,6 +12,10 @@ export class ConfirmResetPasswordRequest {
   password: string;
 }
 
-export class SuccessResponse {
+export class ConfirmResetPasswordResponse {
   message: string;
+
+  constructor(message: string) {
+    this.message = message;
+  }
 }

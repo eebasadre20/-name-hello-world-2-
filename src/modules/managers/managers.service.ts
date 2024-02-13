@@ -56,13 +56,13 @@ export class ManagersService {
       throw new BadRequestException('Refresh token is not valid');
     }
 
+    const newAccessToken = jwt.sign({ scope }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const newRefreshToken = jwt.sign({ scope }, process.env.JWT_REFRESH_SECRET, { expiresIn: `${request.remember_in_hours}h` });
+
     const manager = await this.managersRepository.findOne({ where: { /* logic to find manager based on refresh_token */ } });
     if (!manager) {
       throw new BadRequestException('Manager not found');
     }
-
-    const newAccessToken = jwt.sign({ scope }, process.env.JWT_SECRET, { expiresIn: '24h' });
-    const newRefreshToken = jwt.sign({ scope }, process.env.JWT_REFRESH_SECRET, { expiresIn: `${request.remember_in_hours}h` });
 
     const response: RefreshTokenResponse = {
       access_token: newAccessToken,
@@ -87,7 +87,7 @@ export class ManagersService {
       throw new BadRequestException('Token is not valid');
     }
 
-    const resetPasswordExpireInHours = 1;
+    const resetPasswordExpireInHours = 1; // This value should be replaced with the actual value from your project configuration
     const expirationDate = new Date(manager.reset_password_sent_at);
     expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
 
