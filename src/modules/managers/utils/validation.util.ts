@@ -15,36 +15,24 @@ export function validateLoginInput(email: string, password: string): ValidationR
   // Updated password pattern to enforce a minimum of 8 characters, at least one letter, one number, and one special character
   const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-  // Check if ValidationResult type is expected to be returned based on the context
-  if (typeof ValidationResult !== 'undefined') {
-    let validationResult: ValidationResult = {
-      isValid: true,
-      message: null,
-    };
+  let validationResult: ValidationResult = {
+    isValid: true,
+    message: null,
+  };
 
-    if (!emailPattern.test(email)) {
-      validationResult.isValid = false;
-      validationResult.message = 'Invalid email format';
-      return validationResult;
-    }
-
-    if (!passwordPattern.test(password)) {
-      validationResult.isValid = false;
-      validationResult.message = 'Password must be at least 8 characters long and contain at least one letter, one number, and one special character';
-      return validationResult;
-    }
-
+  if (!emailPattern.test(email)) {
+    validationResult.isValid = false;
+    validationResult.message = 'Invalid email format';
     return validationResult;
-  } else {
-    // If ValidationResult is not defined, use the existing code logic
-    if (!emailPattern.test(email)) {
-      throw new Error('Invalid email format');
-    }
-
-    if (!passwordPattern.test(password)) {
-      throw new Error('Password must be at least 8 characters long and contain at least one letter, one number, and one special character');
-    }
   }
+
+  if (!passwordPattern.test(password)) {
+    validationResult.isValid = false;
+    validationResult.message = 'Password must be at least 8 characters long and contain at least one letter, one number, and one special character';
+    return validationResult;
+  }
+
+  return validationResult;
 }
 
 export function validateEmail(email: string): boolean {
