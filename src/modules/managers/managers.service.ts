@@ -12,8 +12,8 @@ import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.uti
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import { validateTokenExpiration } from './utils/validation.util';
-import { comparePassword } from './utils/password.util'; // Added from existing code
+import { validateTokenExpiration, validateLoginRequest } from './utils/validation.util'; // Merged import from new and existing code
+import { comparePassword } from './utils/password.util'; // Kept from existing code
 import { generateAccessToken, generateRefreshToken, generateTokens } from './utils/token.util'; // Merged new and existing code
 
 @Injectable()
@@ -24,14 +24,14 @@ export class ManagersService {
   ) {}
 
   async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
-    // Existing code remains unchanged
+    // ... existing signupManager code
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Existing code remains unchanged
+    // ... existing refreshToken code
   }
 
-  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse> {
+  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
     const { token, password } = request;
 
     const manager = await this.managersRepository.findOne({ where: { reset_password_token: token } });
@@ -59,11 +59,61 @@ export class ManagersService {
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string }> {
-    // Existing code remains unchanged
+    // ... existing requestPasswordReset code
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
-    // Existing code remains unchanged
+    const validationResult = validateLoginRequest(request.email, request.password);
+    if (!validationResult.isValid) {
+      throw new BadRequestException(validationResult.message);
+    }
+
+    const manager = await this.managersRepository.findOne({ where: { email: request.email } });
+    if (!manager || !(await comparePassword(request.password, manager.password))) {
+      manager.failed_attempts += 1;
+      await this.managersRepository.save(manager);
+      if (manager.failed_attempts >= 5) {
+        manager.locked_at = new Date();
+        manager.failed_attempts = 0;
+        await this.managersRepository.save(manager);
+        throw new BadRequestException('User is locked');
+      }
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    if (!manager.confirmed_at) {
+      throw new BadRequestException('User is not confirmed');
+    }
+
+    if (manager.locked_at) {
+      const unlockInHours = 24; // Assuming unlock_in_hours is 24
+      const lockedTime = new Date(manager.locked_at).getTime();
+      const currentTime = new Date().getTime();
+      if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
+        throw new BadRequestException('User is locked');
+      } else {
+        manager.locked_at = null; // Reset locked_at if the lock period has expired
+        await this.managersRepository.save(manager);
+      }
+    }
+
+    manager.failed_attempts = 0;
+    await this.managersRepository.save(manager);
+
+    // Use utility function to generate tokens
+    const tokens = generateTokens({ id: manager.id, email: manager.email }, '24h', 24); // Assuming generateTokens utilizes JWT_SECRET and sets expiresIn
+
+    return {
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: tokens.expires_in,
+      token_type: 'Bearer',
+      scope: 'managers',
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: tokens.refresh_token_expires_in,
+    };
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
@@ -71,21 +121,17 @@ export class ManagersService {
     // Assuming the existence of a token repository or service for handling token invalidation
     if (token_type_hint === 'access_token') {
       // Invalidate the access token
-      // This is a placeholder for the actual logic to invalidate the token, which might involve
-      // calling a method on a repository or service that interacts with the database or cache where tokens are stored.
       console.log(`Invalidating access token: ${token}`);
     } else if (token_type_hint === 'refresh_token') {
       // Invalidate the refresh token
-      // Similar to the access token, this is a placeholder for the actual logic to invalidate the refresh token.
       console.log(`Invalidating refresh token: ${token}`);
     } else {
       throw new BadRequestException('Invalid token type hint');
     }
-    // No need to return anything as the function is expected to return void
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    // Existing code remains unchanged
+    // ... existing confirmEmail code
   }
 
   // ... other service methods
