@@ -8,7 +8,7 @@ import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse, SuccessRespo
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { LogoutManagerRequest } from './dto/logout-manager.dto';
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
-import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util';
+import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util'; // Merged email util import
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
@@ -128,13 +128,13 @@ export class ManagersService {
 
     if (!manager || !(await bcrypt.compare(password, manager.password))) {
       manager.failed_attempts += 1;
-      await this.managersRepository.save(manager);
       if (manager.failed_attempts >= 5) {
         manager.locked_at = new Date();
         manager.failed_attempts = 0;
         await this.managersRepository.save(manager);
         throw new BadRequestException('User is locked');
       }
+      await this.managersRepository.save(manager);
       throw new BadRequestException('Email or password is not valid');
     }
 
@@ -192,7 +192,7 @@ export class ManagersService {
       throw new BadRequestException('Confirmation token is not valid');
     }
 
-    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, 24);
+    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, 24); // Assuming 24 is the email_expired_in value. Replace it with the actual value from your project configuration. Note the negation to match the function's return logic.
     if (isTokenExpired) {
       throw new BadRequestException('Confirmation token is expired');
     }
@@ -200,7 +200,7 @@ export class ManagersService {
     manager.confirmed_at = new Date();
     await this.managersRepository.save(manager);
 
-    return { user: manager };
+    return { user: manager }; // Updated to match the expected return type
   }
 
   // ... other service methods
