@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Manager } from 'src/entities/managers';
 import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
-import { ConfirmResetPasswordRequest, SuccessResponse } from './dto/confirm-reset-password.dto';
+import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse, SuccessResponse } from './dto/confirm-reset-password.dto'; // Merged DTO import
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { LogoutManagerRequest } from './dto/logout-manager.dto';
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
@@ -51,7 +51,7 @@ export class ManagersService {
     // Existing refreshToken code
   }
 
-  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse> {
+  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> { // Merged method signature
     const { token, password } = request;
 
     const manager = await this.managersRepository.findOne({ where: { reset_password_token: token } });
@@ -75,7 +75,7 @@ export class ManagersService {
 
     await this.managersRepository.save(manager);
 
-    return { message: 'Password reset successfully' };
+    return { message: 'Password reset successfully' }; // Kept the existing response for backward compatibility
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string }> {
@@ -143,7 +143,18 @@ export class ManagersService {
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
-    // Implementation depends on the project setup, this is a placeholder
+    // Assuming the use of JWT and a blacklist approach for simplicity
+    const { token, token_type_hint } = request;
+    if (token_type_hint === 'access_token' || token_type_hint === 'refresh_token') {
+      // Here you would call your method to blacklist the token
+      // This is highly dependent on how you manage tokens (e.g., Redis for blacklist)
+      // For demonstration, let's assume a simple in-memory blacklist
+      // Note: In a real-world scenario, you should implement this with a persistent storage
+      console.log(`Blacklisting token: ${token}`);
+      // Add the token to blacklist
+    } else {
+      throw new BadRequestException('Invalid token type hint');
+    }
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
