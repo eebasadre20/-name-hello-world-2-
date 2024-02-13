@@ -23,7 +23,48 @@ export class ManagersService {
     private managersRepository: Repository<Manager>,
   ) {}
 
-  // ... other service methods
+  async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
+    // Existing code remains unchanged
+  }
+
+  async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
+    // Existing code remains unchanged
+  }
+
+  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse> {
+    const { token, password } = request;
+
+    const manager = await this.managersRepository.findOne({ where: { reset_password_token: token } });
+    if (!manager) {
+      throw new BadRequestException('Token is not valid');
+    }
+
+    const resetPasswordExpireInHours = 1; // This value should be replaced with the actual value from your project configuration
+    const expirationDate = new Date(manager.reset_password_sent_at);
+    expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
+
+    if (new Date() > expirationDate) {
+      throw new BadRequestException('Token is expired');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    manager.reset_password_token = '';
+    manager.reset_password_sent_at = null;
+    manager.password = hashedPassword;
+
+    await this.managersRepository.save(manager);
+
+    return { message: 'Password reset successfully' };
+  }
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    // Existing code remains unchanged
+  }
+
+  async loginManager(request: LoginRequest): Promise<LoginResponse> {
+    // Existing code remains unchanged
+  }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     const { token, token_type_hint } = request;
@@ -43,5 +84,9 @@ export class ManagersService {
     // No need to return anything as the function is expected to return void
   }
 
-  // ... rest of the service methods
+  async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
+    // Existing code remains unchanged
+  }
+
+  // ... other service methods
 }
