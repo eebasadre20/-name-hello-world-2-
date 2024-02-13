@@ -1,3 +1,4 @@
 import { HealthCheckModule } from './health-check/health-check.module'
-
-export default [HealthCheckModule]
+import { UsersModule } from './users/users.module'
+import { AdminUsersModule } from './admin_users/admin_users.module'
+export default [HealthCheckModule, UsersModule, AdminUsersModule]
