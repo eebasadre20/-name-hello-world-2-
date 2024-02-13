@@ -45,11 +45,11 @@ export class ManagersController {
   }
 
   @Post('/logout')
-  async logout(@Body() logoutManagerRequest: LogoutManagerRequest): Promise<void> {
-    if (!logoutManagerRequest.token) {
+  async logoutManager(@Body() request: LogoutManagerRequest): Promise<void> {
+    if (!request.token) {
       throw new BadRequestException('token is required');
     }
-    await this.managersService.logoutManager(logoutManagerRequest);
+    await this.managersService.logoutManager(request);
   }
 
   // No changes to other methods, they remain as is
