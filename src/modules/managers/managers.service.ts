@@ -14,7 +14,7 @@ import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import { validateTokenExpiration } from './utils/validation.util';
 import { comparePassword } from './utils/password.util'; // Added from existing code
-import { generateAccessToken, generateRefreshToken, generateTokens } from './utils/token.util'; // Added from existing code and updated to include generateTokens
+import { generateAccessToken, generateRefreshToken, generateTokens } from './utils/token.util'; // Merged new and existing code
 
 @Injectable()
 export class ManagersService {
@@ -53,21 +53,20 @@ export class ManagersService {
     const { refresh_token, scope } = request;
 
     // Verify the refresh token
+    let manager;
     try {
-      jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+      const decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+      manager = await this.managersRepository.findOne({ where: { id: decoded.id } });
+      if (!manager) {
+        throw new BadRequestException('Manager not found');
+      }
     } catch (error) {
       throw new BadRequestException('Refresh token is not valid');
     }
 
-    // Assuming manager identification from refresh token is handled elsewhere
-    const manager = await this.managersRepository.findOne({ where: { /* logic to find manager based on refresh_token */ } });
-    if (!manager) {
-      throw new BadRequestException('Manager not found');
-    }
-
     // Generate new tokens using the utility functions
     const newAccessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h'); // Assuming generateAccessToken utilizes JWT_SECRET and sets expiresIn
-    const newRefreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, request.remember_in_hours); // Assuming generateRefreshToken utilizes JWT_REFRESH_SECRET
+    const newRefreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, `${request.remember_in_hours}h`); // Assuming generateRefreshToken utilizes JWT_REFRESH_SECRET
 
     // Construct response
     const response: RefreshTokenResponse = {
@@ -93,7 +92,7 @@ export class ManagersService {
       throw new BadRequestException('Token is not valid');
     }
 
-    const resetPasswordExpireInHours = 1; // This value should be replaced with the actual value from your project configuration
+    const resetPasswordExpireInHours = 1;
     const expirationDate = new Date(manager.reset_password_sent_at);
     expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
 
