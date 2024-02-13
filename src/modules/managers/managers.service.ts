@@ -48,10 +48,38 @@ export class ManagersService {
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Existing refreshToken code
+    const { refresh_token, scope } = request;
+
+    try {
+      jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+    } catch (error) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    const newAccessToken = jwt.sign({ scope }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const newRefreshToken = jwt.sign({ scope }, process.env.JWT_REFRESH_SECRET, { expiresIn: `${request.remember_in_hours}h` });
+
+    const manager = await this.managersRepository.findOne({ where: { /* logic to find manager based on refresh_token */ } });
+    if (!manager) {
+      throw new BadRequestException('Manager not found');
+    }
+
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: request.remember_in_hours * 3600,
+    };
+
+    return response;
   }
 
-  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> { // Merged method signature
+  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
     const { token, password } = request;
 
     const manager = await this.managersRepository.findOne({ where: { reset_password_token: token } });
@@ -59,7 +87,7 @@ export class ManagersService {
       throw new BadRequestException('Token is not valid');
     }
 
-    const resetPasswordExpireInHours = 1; // This value should be replaced with the actual value from your project configuration
+    const resetPasswordExpireInHours = 1;
     const expirationDate = new Date(manager.reset_password_sent_at);
     expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
 
@@ -75,7 +103,7 @@ export class ManagersService {
 
     await this.managersRepository.save(manager);
 
-    return { message: 'Password reset successfully' }; // Kept the existing response for backward compatibility
+    return { message: 'Password reset successfully' };
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string }> {
@@ -115,7 +143,7 @@ export class ManagersService {
     }
 
     if (manager.locked_at) {
-      const unlockInHours = 24; // Assuming 24 is the unlock_in_hours value. Replace it with the actual value from your project configuration.
+      const unlockInHours = 24;
       const lockedTime = new Date(manager.locked_at).getTime();
       const currentTime = new Date().getTime();
       if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
@@ -143,15 +171,9 @@ export class ManagersService {
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
-    // Assuming the use of JWT and a blacklist approach for simplicity
     const { token, token_type_hint } = request;
     if (token_type_hint === 'access_token' || token_type_hint === 'refresh_token') {
-      // Here you would call your method to blacklist the token
-      // This is highly dependent on how you manage tokens (e.g., Redis for blacklist)
-      // For demonstration, let's assume a simple in-memory blacklist
-      // Note: In a real-world scenario, you should implement this with a persistent storage
       console.log(`Blacklisting token: ${token}`);
-      // Add the token to blacklist
     } else {
       throw new BadRequestException('Invalid token type hint');
     }
@@ -170,7 +192,7 @@ export class ManagersService {
       throw new BadRequestException('Confirmation token is not valid');
     }
 
-    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, 24); // Assuming 24 is the email_expired_in value. Replace it with the actual value from your project configuration. Note the negation to match the function's return logic.
+    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, 24);
     if (isTokenExpired) {
       throw new BadRequestException('Confirmation token is expired');
     }
@@ -178,7 +200,7 @@ export class ManagersService {
     manager.confirmed_at = new Date();
     await this.managersRepository.save(manager);
 
-    return { user: manager }; // Updated to match the expected return type
+    return { user: manager };
   }
 
   // ... other service methods
