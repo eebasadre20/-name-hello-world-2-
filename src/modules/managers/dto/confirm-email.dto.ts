@@ -1,14 +1,15 @@
-import { IsString } from 'class-validator';
+import { IsString, Matches } from 'class-validator';
 
 export class ConfirmEmailRequest {
   @IsString()
-  token: string; // No change needed, already matches the requirement
+  @Matches(/^[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/, { message: 'Invalid token format' })
+  token: string;
 }
 
 export class ConfirmEmailResponse {
   user: any; // Assuming Manager is imported or defined elsewhere in the actual codebase
 
-  constructor(manager: any) { // Changed Manager to any to match the current code until Manager model is defined
+  constructor(manager: any) {
     this.user = {
       id: manager.id,
       created_at: manager.created_at,
