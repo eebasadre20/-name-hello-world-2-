@@ -24,11 +24,61 @@ export class ManagersService {
   ) {}
 
   async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
-    // ... existing signupManager code
+    const { email, password } = request;
+
+    const existingManager = await this.managersRepository.findOne({ where: { email } });
+    if (existingManager) {
+      throw new BadRequestException('Email is already taken');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const confirmationToken = randomBytes(32).toString('hex');
+
+    const manager = this.managersRepository.create({
+      email,
+      password: hashedPassword,
+      confirmation_token: confirmationToken,
+      confirmed_at: null,
+    });
+
+    await this.managersRepository.save(manager);
+
+    const confirmationUrl = `http://yourfrontend.com/confirm-email?confirmation_token=${confirmationToken}`;
+    await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
+
+    return { user: manager };
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // ... existing refreshToken code
+    const { refresh_token, scope } = request;
+
+    let manager;
+    try {
+      const decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+      manager = await this.managersRepository.findOne({ where: { id: decoded.id } });
+      if (!manager) {
+        throw new BadRequestException('Manager not found');
+      }
+    } catch (error) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    const newAccessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h');
+    const newRefreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, `${request.remember_in_hours}h`);
+
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400,
+      token_type: 'Bearer',
+      scope: scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: request.remember_in_hours * 3600,
+    };
+
+    return response;
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
@@ -39,7 +89,7 @@ export class ManagersService {
       throw new BadRequestException('Token is not valid');
     }
 
-    const resetPasswordExpireInHours = 1; // This value should be replaced with the actual value from your project configuration
+    const resetPasswordExpireInHours = 1;
     const expirationDate = new Date(manager.reset_password_sent_at);
     expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
 
@@ -58,8 +108,20 @@ export class ManagersService {
     return { message: 'Password reset successfully' };
   }
 
-  async requestPasswordReset(email: string): Promise<{ message: string }> {
-    // ... existing requestPasswordReset code
+  async requestPasswordReset(email: string): Promise<SuccessResponse> {
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, passwordResetUrl);
+    }
+
+    return { message: "If an account with that email was found, we've sent a password reset link to it." };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
@@ -86,13 +148,13 @@ export class ManagersService {
     }
 
     if (manager.locked_at) {
-      const unlockInHours = 24; // Assuming unlock_in_hours is 24
+      const unlockInHours = 24;
       const lockedTime = new Date(manager.locked_at).getTime();
       const currentTime = new Date().getTime();
       if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
         throw new BadRequestException('User is locked');
       } else {
-        manager.locked_at = null; // Reset locked_at if the lock period has expired
+        manager.locked_at = null;
         await this.managersRepository.save(manager);
       }
     }
@@ -100,8 +162,7 @@ export class ManagersService {
     manager.failed_attempts = 0;
     await this.managersRepository.save(manager);
 
-    // Use utility function to generate tokens
-    const tokens = generateTokens({ id: manager.id, email: manager.email }, '24h', 24); // Assuming generateTokens utilizes JWT_SECRET and sets expiresIn
+    const tokens = generateTokens({ id: manager.id, email: manager.email }, '24h');
 
     return {
       access_token: tokens.access_token,
@@ -118,12 +179,9 @@ export class ManagersService {
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     const { token, token_type_hint } = request;
-    // Assuming the existence of a token repository or service for handling token invalidation
     if (token_type_hint === 'access_token') {
-      // Invalidate the access token
       console.log(`Invalidating access token: ${token}`);
     } else if (token_type_hint === 'refresh_token') {
-      // Invalidate the refresh token
       console.log(`Invalidating refresh token: ${token}`);
     } else {
       throw new BadRequestException('Invalid token type hint');
@@ -131,7 +189,27 @@ export class ManagersService {
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    // ... existing confirmEmail code
+    const { token } = request;
+    const manager = await this.managersRepository.findOne({
+      where: {
+        confirmation_token: token,
+        confirmed_at: null,
+      },
+    });
+
+    if (!manager) {
+      throw new BadRequestException('Confirmation token is not valid');
+    }
+
+    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, 24);
+    if (isTokenExpired) {
+      throw new BadRequestException('Confirmation token is expired');
+    }
+
+    manager.confirmed_at = new Date();
+    await this.managersRepository.save(manager);
+
+    return { user: manager };
   }
 
   // ... other service methods
