@@ -5,10 +5,9 @@ export class LogoutManagerRequest {
   @IsNotEmpty()
   token: string;
 
-  // Removed @IsIn(['access_token', 'refresh_token']) as it is not used in the controller
   @IsString()
   @IsNotEmpty()
+  // Combining the new and existing validations for token_type_hint
+  @IsIn(['access_token', 'refresh_token'])
   token_type_hint: string;
 }
-
-// Removed LogoutManagerResponse as it is not used in the controller
