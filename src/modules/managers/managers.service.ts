@@ -8,7 +8,7 @@ import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse, SuccessRespo
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { LogoutManagerRequest } from './dto/logout-manager.dto';
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
-import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util';
+import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util'; // Updated to include sendConfirmationEmail
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
@@ -40,10 +40,6 @@ export class ManagersService {
     } catch (error) {
       throw new BadRequestException('Refresh token is not valid');
     }
-
-    // Assuming deleteOldRefreshToken is a method that deletes the old refresh token
-    // This is a placeholder for actual implementation
-    // deleteOldRefreshToken(refresh_token);
 
     const remember_in_hours = 48; // Assuming 48 hours for refresh token expiration as a default if not provided
     const newAccessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h');
@@ -92,7 +88,19 @@ export class ManagersService {
   }
 
   async requestPasswordReset(email: string): Promise<SuccessResponse> {
-    // Existing requestPasswordReset implementation
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetUrl);
+    }
+
+    return { message: "If an account with that email was found, we've sent a password reset link to it." };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
@@ -101,19 +109,13 @@ export class ManagersService {
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     const { token, token_type_hint } = request;
-    // Assuming the use of a hypothetical token management service for demonstration
     if (token_type_hint === 'access_token') {
-      // Here you would call your token management service to blacklist the access token
       console.log(`Blacklisting access token: ${token}`);
-      // Example: tokenManagementService.blacklistAccessToken(token);
     } else if (token_type_hint === 'refresh_token') {
-      // Here you would call your token management service or directly interact with your database to delete the refresh token
       console.log(`Deleting refresh token: ${token}`);
-      // Example: tokenManagementService.deleteRefreshToken(token);
     } else {
       throw new BadRequestException('Invalid token type hint');
     }
-    // No direct output, but a success response is implied by the absence of exceptions
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
