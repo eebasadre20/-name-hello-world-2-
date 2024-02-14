@@ -28,7 +28,43 @@ export class ManagersService {
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Existing refreshToken implementation
+    // Assuming there's a method to validate the refresh token. This is a placeholder.
+    const isValidToken = true; // This should be replaced with actual validation logic
+    if (!isValidToken) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    // Assuming there's a method to find a manager by refresh token. This is a placeholder.
+    const manager = await this.managersRepository.findOne({ where: { refresh_token: request.refresh_token } });
+    if (!manager) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    // Delete the old refresh token
+    manager.refresh_token = ''; // Assuming the refresh token is stored in the manager entity
+    await this.managersRepository.save(manager);
+
+    // Generate new tokens
+    const newAccessToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const newRefreshToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_REFRESH_SECRET, { expiresIn: `${request.remember_in_hours}h` });
+
+    // Assuming we update the manager with the new refresh token
+    manager.refresh_token = newRefreshToken;
+    await this.managersRepository.save(manager);
+
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: request.scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: request.remember_in_hours * 3600, // convert hours to seconds
+    };
+
+    return response;
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
