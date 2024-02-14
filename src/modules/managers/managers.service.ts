@@ -12,9 +12,9 @@ import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.uti
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import { validateLoginInput, validateTokenExpiration, validateLoginRequest } from './utils/validation.util'; // Combined validation utils
+import { validateTokenExpiration, validateLoginRequest } from './utils/validation.util'; // Kept both validation utils
 import { comparePassword } from './utils/password.util';
-import { generateTokens, generateAccessToken, generateRefreshToken } from './utils/token.util'; // Combined token utils
+import { generateTokens, generateAccessToken, generateRefreshToken } from './utils/token.util'; // Kept combined token utils
 
 @Injectable()
 export class ManagersService {
@@ -76,7 +76,7 @@ export class ManagersService {
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
     // Validate the login input
-    const validationResult = validateLoginInput(request.email, request.password) || validateLoginRequest(request.email, request.password); // Combined validation logic
+    const validationResult = validateLoginRequest(request.email, request.password); // Used validateLoginRequest directly as it's the updated validation logic
     if (!validationResult.isValid) {
       throw new BadRequestException(validationResult.errorMessage);
     }
@@ -134,7 +134,14 @@ export class ManagersService {
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
-    // Existing logoutManager implementation
+    const { token, token_type_hint } = request;
+    if (token_type_hint === 'access_token') {
+      console.log(`Blacklisting access token: ${token}`);
+    } else if (token_type_hint === 'refresh_token') {
+      console.log(`Deleting refresh token: ${token}`);
+    } else {
+      throw new BadRequestException('Invalid token type hint');
+    }
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
