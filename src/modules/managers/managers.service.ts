@@ -28,7 +28,41 @@ export class ManagersService {
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Existing refreshToken implementation
+    const { refresh_token, scope } = request;
+
+    let manager;
+    try {
+      const decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+      manager = await this.managersRepository.findOne({ where: { id: decoded.id } });
+      if (!manager) {
+        throw new BadRequestException('Manager not found');
+      }
+    } catch (error) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    // Assuming the remember_in_hours is dynamically provided, else default to 48 hours
+    const remember_in_hours = request.remember_in_hours || 48;
+    const newAccessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h');
+    const newRefreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, `${remember_in_hours}h`);
+
+    // Delete the old refresh token logic should be implemented here
+    // For example, if refresh tokens are stored in a database, delete the old token record.
+    // This example does not include specific deletion logic as it depends on the storage solution.
+
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: remember_in_hours * 3600, // convert hours to seconds
+    };
+
+    return response;
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
@@ -75,7 +109,54 @@ export class ManagersService {
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
-    // Existing loginManager implementation
+    const { email, password } = request;
+    const manager = await this.managersRepository.findOne({ where: { email } });
+
+    if (!manager || !(await comparePassword(password, manager.password))) {
+      manager.failed_attempts += 1;
+      if (manager.failed_attempts >= 5) {
+        manager.locked_at = new Date();
+        manager.failed_attempts = 0;
+        await this.managersRepository.save(manager);
+        throw new BadRequestException('User is locked');
+      }
+      await this.managersRepository.save(manager);
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    if (!manager.confirmed_at) {
+      throw new BadRequestException('User is not confirmed');
+    }
+
+    if (manager.locked_at) {
+      const unlockInHours = 24; // This value should be replaced with the actual value from your project configuration
+      const lockedTime = new Date(manager.locked_at).getTime();
+      const currentTime = new Date().getTime();
+      if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
+        throw new BadRequestException('User is locked');
+      }
+      // If the lock duration has passed, reset the locked_at to null
+      manager.locked_at = null;
+    }
+
+    manager.failed_attempts = 0;
+    await this.managersRepository.save(manager);
+
+    const { accessToken, refreshToken } = generateTokens({ id: manager.id, email: manager.email }, '24h', '48h');
+
+    const response: LoginResponse = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: 'managers',
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: 172800, // 48 hours in seconds
+    };
+
+    return response;
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {

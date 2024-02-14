@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsISO8601 } from 'class-validator';
 
 export class RefreshTokenRequest {
   @IsString()
@@ -11,11 +11,11 @@ export class RefreshTokenRequest {
 
   @IsString()
   @IsNotEmpty()
-  client_id: string; // Added back client_id as it is used in the controller
+  client_id: string; // Ensuring client_id is validated
 
   @IsString()
   @IsNotEmpty()
-  client_secret: string; // Added back client_secret as it is used in the controller
+  client_secret: string; // Ensuring client_secret is validated
 }
 
 export class RefreshTokenResponse {
