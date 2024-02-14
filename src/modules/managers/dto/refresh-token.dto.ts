@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsISO8601 } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class RefreshTokenRequest {
   @IsString()
@@ -9,7 +9,13 @@ export class RefreshTokenRequest {
   @IsNotEmpty()
   scope: string;
 
-  // Removed client_id and client_secret as they are not mentioned in the requirement
+  @IsString()
+  @IsNotEmpty()
+  client_id: string; // Added back client_id as it is used in the controller
+
+  @IsString()
+  @IsNotEmpty()
+  client_secret: string; // Added back client_secret as it is used in the controller
 }
 
 export class RefreshTokenResponse {
