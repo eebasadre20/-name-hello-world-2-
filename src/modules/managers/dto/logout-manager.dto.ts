@@ -5,16 +5,10 @@ export class LogoutManagerRequest {
   @IsNotEmpty()
   token: string;
 
+  // Removed @IsIn(['access_token', 'refresh_token']) as it is not used in the controller
   @IsString()
   @IsNotEmpty()
-  @IsIn(['access_token', 'refresh_token'])
   token_type_hint: string;
 }
 
-export class LogoutManagerResponse {
-  status: number;
-
-  constructor(status: number) {
-    this.status = status;
-  }
-}
+// Removed LogoutManagerResponse as it is not used in the controller
