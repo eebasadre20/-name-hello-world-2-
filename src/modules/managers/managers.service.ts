@@ -12,7 +12,7 @@ import { sendPasswordResetEmail, sendConfirmationEmail } from './utils/email.uti
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import { validateLoginInput, validateLoginRequest } from './utils/validation.util'; // Merged validation utils
+import { validateLoginInput, validateLoginRequest } from './utils/validation.util';
 import { comparePassword } from './utils/password.util';
 import { generateTokens } from './utils/token.util';
 import * as moment from 'moment';
@@ -29,7 +29,7 @@ export class ManagersService {
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // New refreshToken implementation from new code
+    // Existing refreshToken implementation from new code
     // Validate the refresh token
     const manager = await this.managersRepository.findOne({
       where: { refresh_token: request.refresh_token },
@@ -163,7 +163,27 @@ export class ManagersService {
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<LogoutManagerResponse | void> {
-    // Existing logoutManager implementation
+    // Validate the token_type_hint to ensure it's either "access_token" or "refresh_token"
+    if (!['access_token', 'refresh_token'].includes(request.token_type_hint)) {
+      throw new BadRequestException('Invalid token type hint provided.');
+    }
+
+    // Here you would add the logic to either delete the token from the database
+    // or add it to a blacklist, depending on your application's requirements.
+    // This example assumes a function `blacklistToken` exists for demonstration purposes.
+    // You would replace this with your actual implementation.
+    try {
+      // Assuming a function `blacklistToken` exists and takes the token and its type.
+      // This is a placeholder for your actual token handling logic.
+      await this.blacklistToken(request.token, request.token_type_hint);
+    } catch (error) {
+      throw new BadRequestException('Failed to logout manager.');
+    }
+  }
+
+  // Placeholder for the blacklistToken function. Replace with your actual implementation.
+  private async blacklistToken(token: string, type: string): Promise<void> {
+    // Logic to blacklist the token
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
