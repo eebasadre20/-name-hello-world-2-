@@ -27,8 +27,7 @@ export const generateRefreshToken = (user: Manager, rememberInHours: number): st
 
 export const generateTokens = (managerId: string, rememberInHours: number) => {
   // Assuming the existence of a function to fetch the manager's details using managerId
-  // This is a placeholder function. Replace it with the actual function to fetch manager details.
-  const manager = fetchManagerDetails(managerId); // Placeholder function
+  const manager = fetchManagerDetails(managerId); // This function needs to be implemented to fetch manager details
 
   const accessTokenExpiresIn = 24 * 60 * 60; // 24 hours in seconds
   const refreshTokenExpiresIn = rememberInHours * 60 * 60; // Convert hours to seconds based on remember_in_hours
@@ -59,10 +58,11 @@ export const generateTokens = (managerId: string, rememberInHours: number) => {
   };
 };
 
-// Placeholder function for fetching manager details. Replace with actual implementation.
+// This function fetchManagerDetails needs to be implemented to fetch manager details from the database or any data source
 function fetchManagerDetails(managerId: string): Manager {
   // Implementation to fetch manager details from the database or any data source
-  // This is just a placeholder. Replace it with actual data fetching logic.
+  // This should be replaced with actual data fetching logic.
+  // For the purpose of this example, returning a mock object
   return {
     id: managerId,
     email: 'manager@example.com',
