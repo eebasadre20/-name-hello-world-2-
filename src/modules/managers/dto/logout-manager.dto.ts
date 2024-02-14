@@ -5,10 +5,7 @@ export class LogoutManagerRequest {
   @IsNotEmpty()
   token: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['access_token', 'refresh_token'], { message: 'Invalid token type hint' }) // Added custom message for validation
-  token_type_hint: string;
+  // Removed the token_type_hint field as it is not used in the controller code
 }
 
 export class LogoutManagerResponse {
