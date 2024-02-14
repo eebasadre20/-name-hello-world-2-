@@ -5,8 +5,5 @@ export class LogoutManagerRequest {
   @IsNotEmpty()
   token: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['access_token', 'refresh_token'])
-  token_type_hint: string;
+  // Removed the token_type_hint field as it is not used in the controller code
 }
