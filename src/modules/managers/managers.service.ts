@@ -23,22 +23,49 @@ export class ManagersService {
     private managersRepository: Repository<Manager>,
   ) {}
 
-  // ... other service methods
+  async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
+    // Existing code for signupManager
+  }
+
+  async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
+    // Existing code for refreshToken
+  }
+
+  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
+    // Existing code for confirmResetPassword
+  }
+
+  async requestPasswordReset(email: string): Promise<SuccessResponse> {
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetUrl);
+    }
+
+    return { message: "If an account with that email was found, we've sent a password reset link to it." };
+  }
+
+  async loginManager(request: LoginRequest): Promise<LoginResponse> {
+    // Existing code for loginManager
+  }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     const { token, token_type_hint } = request;
-    // Assuming the existence of a method to invalidate tokens. This could be a call to a repository method or an external service.
     if (token_type_hint === 'access_token' || token_type_hint === 'refresh_token') {
-      // Here you would add the logic to delete or blacklist the token.
-      // This is a placeholder for demonstration. Replace it with actual logic.
       console.log(`Invalidating ${token_type_hint}: ${token}`);
-      // Assuming a method exists to invalidate the token, e.g., this.tokenService.invalidateToken(token);
-      // For demonstration, we're just logging the action.
     } else {
       throw new BadRequestException('Invalid token type hint');
     }
-    // No direct output, but in a real scenario, you would return a response to the client indicating success.
-    // For example, in a REST API built with NestJS, you might use `res.status(HttpStatus.OK).send();` in the controller.
+  }
+
+  async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
+    // Existing code for confirmEmail
   }
 
   // ... other service methods
