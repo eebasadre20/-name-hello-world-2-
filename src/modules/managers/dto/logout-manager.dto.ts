@@ -11,4 +11,6 @@ export class LogoutManagerRequest {
   token_type_hint: string;
 }
 
-export class LogoutManagerResponse {}
+export class LogoutManagerResponse {
+  // Define any additional response properties here if needed in the future
+}
