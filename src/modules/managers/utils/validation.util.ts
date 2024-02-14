@@ -18,6 +18,13 @@ export function validateToken(token: string): boolean {
   return true; // Token is valid based on the given criteria
 }
 
+export function validateConfirmEmailToken(token: string): boolean {
+  // Define the expected format for the confirmation token
+  // This example assumes a simpler format for demonstration purposes
+  const tokenPattern = /^[A-Za-z0-9]{32}$/; // Example pattern: exactly 32 alphanumeric characters
+  return tokenPattern.test(token); // Validate the token against the pattern
+}
+
 export function validateLoginInput(email: string, password: string): ValidationResult | void {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   // Updated password pattern to enforce a minimum of 8 characters, at least one letter, one number, and one special character
@@ -51,9 +58,4 @@ export function validateEmail(email: string): boolean {
 interface ValidationResult {
   isValid: boolean,
   message: string | null,
-}
-
-export function validateLoginRequest(email: string, password: string): ValidationResult {
-  // Reusing existing validation logic for email and password
-  return validateLoginInput(email, password);
 }
