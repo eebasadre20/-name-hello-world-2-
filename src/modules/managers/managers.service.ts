@@ -28,7 +28,40 @@ export class ManagersService {
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Existing refreshToken implementation
+    const { refresh_token, scope } = request;
+
+    let manager;
+    try {
+      const decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+      manager = await this.managersRepository.findOne({ where: { id: decoded.id } });
+      if (!manager) {
+        throw new BadRequestException('Manager not found');
+      }
+    } catch (error) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    // Assuming deleteOldRefreshToken is a method that deletes the old refresh token
+    // This is a placeholder for actual implementation
+    // deleteOldRefreshToken(refresh_token);
+
+    const remember_in_hours = 48; // Assuming 48 hours for refresh token expiration as a default if not provided
+    const newAccessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h');
+    const newRefreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, `${remember_in_hours}h`);
+
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: remember_in_hours * 3600, // convert hours to seconds
+    };
+
+    return response;
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
