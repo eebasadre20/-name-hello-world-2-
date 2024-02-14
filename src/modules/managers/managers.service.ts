@@ -2,19 +2,19 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Manager } from 'src/entities/managers';
-import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
+import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse, SuccessResponse } from './dto/confirm-reset-password.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
-import { LogoutManagerRequest, LogoutManagerResponse } from './dto/logout-manager.dto';
+import { LogoutManagerRequest, LogoutManagerResponse } from './dto/logout-manager.dto'; // Adjusted import for LogoutManagerResponse
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
-import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util';
+import { sendPasswordResetEmail, sendConfirmationEmail } from './utils/email.util'; // Combined email util imports
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import { validateLoginInput, validateLoginRequest } from './utils/validation.util';
+import { validateLoginInput, validateLoginRequest } from './utils/validation.util'; // Combined both validation utils
 import { comparePassword } from './utils/password.util';
-import { generateToken, generateRefreshToken } from './utils/token.util';
+import { generateTokens } from './utils/token.util'; // Adjusted for combined token utils
 import * as moment from 'moment';
 
 @Injectable()
@@ -87,7 +87,19 @@ export class ManagersService {
   }
 
   async requestPasswordReset(email: string): Promise<SuccessResponse> {
-    // Existing requestPasswordReset implementation
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+      await this.managersRepository.save(manager);
+
+      // Assuming the URL to the password reset page is '/reset-password'
+      const passwordResetURL = `https://yourdomain.com/reset-password?reset_token=${passwordResetToken}`;
+      sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetURL);
+    }
+    // Always return success response to avoid revealing email registration status
+    return { message: 'If an account with that email exists, we have sent a password reset link.' };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
@@ -127,13 +139,12 @@ export class ManagersService {
     manager.failed_attempts = 0;
     await this.managersRepository.save(manager);
 
-    const accessToken = generateToken(manager.id); // Assuming generateToken is correctly implemented
-    const refreshToken = generateRefreshToken(manager.id); // Assuming generateRefreshToken is correctly implemented
+    const tokens = generateTokens(manager.id); // Adjusted for combined token utils
     const remember_in_hours = 48; // Assuming 48 hours for refresh token expiration
 
     return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
       resource_owner: 'managers',
       resource_id: manager.id.toString(),
       expires_in: 86400, // 24 hours in seconds
