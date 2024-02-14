@@ -26,7 +26,7 @@ export class EmailUtil {
   }
 
   async sendPasswordResetEmail(email: string, token: string, name: string = "User"): Promise<void> {
-    const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${token}`; // Updated the query parameter to match the requirement
+    const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${token}`;
     try {
       await this.mailerService.sendMail({
         to: email,
@@ -36,12 +36,12 @@ export class EmailUtil {
           name: name,
           url: passwordResetUrl,
           token: token,
-          // Removed 'link' as it was redundant with 'url'
+          // Keeping the context clean and focused on required fields only
         },
       });
     } catch (error) {
       console.error('Error sending password reset email', error);
-      // Changed to log the error instead of throwing it to avoid affecting the user's response
+      // Opting to log the error instead of throwing it, to avoid affecting the user's experience negatively
     }
   }
 }

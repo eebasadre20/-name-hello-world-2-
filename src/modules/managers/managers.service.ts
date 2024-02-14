@@ -36,8 +36,20 @@ export class ManagersService {
     // Existing confirmResetPassword implementation
   }
 
-  async requestPasswordReset(email: string): Promise<SuccessResponse> {
-    // Existing requestPasswordReset implementation
+  async requestPasswordReset(email: string): Promise<{ message: string } | SuccessResponse> {
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetUrl);
+    }
+
+    return { message: "Password reset request processed successfully." };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {

@@ -1,4 +1,5 @@
-import { sign } from 'jsonwebtoken';
+import { sign, randomBytes } from 'jsonwebtoken';
+import { promisify } from 'util';
 import { Manager } from '../../entities/managers';
 
 export const generateAccessToken = (user: Manager): string => {
@@ -70,3 +71,10 @@ function fetchManagerDetails(managerId: string): Manager {
     // other manager properties
   } as Manager;
 }
+
+// New function to generate a secure random token for password reset
+export const generatePasswordResetToken = async (): Promise<string> => {
+  const randomBytesAsync = promisify(randomBytes);
+  const buffer = await randomBytesAsync(48); // Generates a buffer with 48 bytes of random data
+  return buffer.toString('hex'); // Converts the buffer to a hex string, resulting in a 96-character token
+};
