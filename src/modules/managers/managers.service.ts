@@ -43,12 +43,8 @@ export class ManagersService {
 
     // Assuming the remember_in_hours is dynamically provided, else default to 48 hours
     const remember_in_hours = request.remember_in_hours || 48;
-    const newAccessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h');
-    const newRefreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, `${remember_in_hours}h`);
-
-    // Delete the old refresh token logic should be implemented here
-    // For example, if refresh tokens are stored in a database, delete the old token record.
-    // This example does not include specific deletion logic as it depends on the storage solution.
+    const newAccessToken = generateAccessToken(manager.id);
+    const newRefreshToken = generateRefreshToken(manager.id, remember_in_hours);
 
     const response: RefreshTokenResponse = {
       access_token: newAccessToken,
@@ -112,15 +108,20 @@ export class ManagersService {
     const { email, password } = request;
     const manager = await this.managersRepository.findOne({ where: { email } });
 
-    if (!manager || !(await comparePassword(password, manager.password))) {
+    if (!manager) {
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    const passwordIsValid = await comparePassword(password, manager.password);
+    if (!passwordIsValid) {
       manager.failed_attempts += 1;
-      if (manager.failed_attempts >= 5) {
+      await this.managersRepository.save(manager);
+      if (manager.failed_attempts >= 5) { // Assuming 5 is the maximum login attempts
         manager.locked_at = new Date();
         manager.failed_attempts = 0;
         await this.managersRepository.save(manager);
         throw new BadRequestException('User is locked');
       }
-      await this.managersRepository.save(manager);
       throw new BadRequestException('Email or password is not valid');
     }
 
@@ -129,22 +130,22 @@ export class ManagersService {
     }
 
     if (manager.locked_at) {
-      const unlockInHours = 24; // This value should be replaced with the actual value from your project configuration
+      const unlockInHours = 24; // Assuming 24 hours to unlock
       const lockedTime = new Date(manager.locked_at).getTime();
       const currentTime = new Date().getTime();
       if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
         throw new BadRequestException('User is locked');
       }
-      // If the lock duration has passed, reset the locked_at to null
       manager.locked_at = null;
     }
 
     manager.failed_attempts = 0;
     await this.managersRepository.save(manager);
 
-    const { accessToken, refreshToken } = generateTokens({ id: manager.id, email: manager.email }, '24h', '48h');
+    const accessToken = await generateAccessToken(manager.id);
+    const refreshToken = await generateRefreshToken(manager.id, 48); // Assuming 48 hours for refresh token expiration
 
-    const response: LoginResponse = {
+    return {
       access_token: accessToken,
       refresh_token: refreshToken,
       resource_owner: 'managers',
@@ -155,8 +156,6 @@ export class ManagersService {
       created_at: new Date().toISOString(),
       refresh_token_expires_in: 172800, // 48 hours in seconds
     };
-
-    return response;
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
