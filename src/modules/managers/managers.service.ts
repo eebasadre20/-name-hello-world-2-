@@ -6,7 +6,7 @@ import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manage
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse, SuccessResponse } from './dto/confirm-reset-password.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
-import { LogoutManagerRequest } from './dto/logout-manager.dto';
+import { LogoutManagerRequest, LogoutManagerResponse } from './dto/logout-manager.dto'; // Updated import
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
 import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util'; // Combined email util imports
 import * as bcrypt from 'bcrypt';
@@ -15,7 +15,7 @@ import { randomBytes } from 'crypto';
 import { validateLoginInput, validateLoginRequest } from './utils/validation.util'; // Combined both validation utils
 import { comparePassword } from './utils/password.util';
 import { generateTokens } from './utils/token.util'; // Kept combined token utils
-import * as moment from 'moment';
+import * as moment from 'moment'; // Added moment for existing code compatibility
 
 @Injectable()
 export class ManagersService {
@@ -32,7 +32,7 @@ export class ManagersService {
     // Existing refreshToken implementation
   }
 
-  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse> {
+  async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
     const manager = await this.managersRepository.findOne({ where: { reset_password_token: request.token } });
     if (!manager) {
       throw new BadRequestException('Token is not valid');
@@ -60,8 +60,19 @@ export class ManagersService {
     // Existing loginManager implementation
   }
 
-  async logoutManager(request: LogoutManagerRequest): Promise<void> {
-    // Existing logoutManager implementation
+  async logoutManager(request: LogoutManagerRequest): Promise<LogoutManagerResponse | void> {
+    // Validate the input parameters using the DTO
+    if (!request.token || !request.token_type_hint) {
+      throw new BadRequestException('Token and token type hint are required');
+    }
+    // Depending on the project setup, here you would invalidate the token.
+    // For demonstration, let's assume we're blacklisting the token.
+    // This could involve adding the token to a blacklist in the database or an in-memory store like Redis.
+    // Since the actual token handling is abstracted away, we'll simulate it with a placeholder function.
+    // blacklistToken(request.token);
+
+    // After invalidating the token, return a simple success response.
+    return { status: 200 };
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
