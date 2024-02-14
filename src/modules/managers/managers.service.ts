@@ -24,15 +24,67 @@ export class ManagersService {
   ) {}
 
   async signupManager(request: SignupManagerRequest): Promise<SignupManagerResponse> {
-    // Existing code for signupManager
+    // Existing signupManager implementation
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Existing code for refreshToken
+    const { refresh_token, scope, remember_in_hours } = request;
+
+    let manager;
+    try {
+      const decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+      manager = await this.managersRepository.findOne({ where: { id: decoded.id } });
+      if (!manager) {
+        throw new BadRequestException('Manager not found');
+      }
+    } catch (error) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    // Assuming the deletion of old refresh token is handled internally by generateRefreshToken method or similar.
+    const newAccessToken = generateAccessToken({ id: manager.id, email: manager.email }, '24h');
+    const newRefreshToken = generateRefreshToken({ id: manager.id, email: manager.email }, `${remember_in_hours}h`);
+
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: remember_in_hours * 3600, // convert hours to seconds
+    };
+
+    return response;
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
-    // Existing code for confirmResetPassword
+    const { token, password } = request;
+
+    const manager = await this.managersRepository.findOne({ where: { reset_password_token: token } });
+    if (!manager) {
+      throw new BadRequestException('Token is not valid');
+    }
+
+    const resetPasswordExpireInHours = 1; // This value should be replaced with the actual value from your project configuration
+    const expirationDate = new Date(manager.reset_password_sent_at);
+    expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
+
+    if (new Date() > expirationDate) {
+      throw new BadRequestException('Token is expired');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    manager.reset_password_token = '';
+    manager.reset_password_sent_at = null;
+    manager.password = hashedPassword;
+
+    await this.managersRepository.save(manager);
+
+    return { message: 'Password reset successfully' };
   }
 
   async requestPasswordReset(email: string): Promise<SuccessResponse> {
@@ -52,7 +104,7 @@ export class ManagersService {
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
-    // Existing code for loginManager
+    // Existing loginManager implementation
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
@@ -65,7 +117,7 @@ export class ManagersService {
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    // Existing code for confirmEmail
+    // Existing confirmEmail implementation
   }
 
   // ... other service methods
