@@ -49,6 +49,11 @@ export function validateEmail(email: string): boolean {
 }
 
 interface ValidationResult {
-  isValid: boolean;
-  message: string | null;
+  isValid: boolean,
+  message: string | null,
+}
+
+export function validateLoginRequest(email: string, password: string): ValidationResult {
+  // Reusing existing validation logic for email and password
+  return validateLoginInput(email, password);
 }
