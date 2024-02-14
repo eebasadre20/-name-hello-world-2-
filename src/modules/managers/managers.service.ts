@@ -67,7 +67,20 @@ export class ManagersService {
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
-    // Existing logoutManager implementation
+    const { token, token_type_hint } = request;
+    // Assuming the use of a hypothetical token management service for demonstration
+    if (token_type_hint === 'access_token') {
+      // Here you would call your token management service to blacklist the access token
+      console.log(`Blacklisting access token: ${token}`);
+      // Example: tokenManagementService.blacklistAccessToken(token);
+    } else if (token_type_hint === 'refresh_token') {
+      // Here you would call your token management service or directly interact with your database to delete the refresh token
+      console.log(`Deleting refresh token: ${token}`);
+      // Example: tokenManagementService.deleteRefreshToken(token);
+    } else {
+      throw new BadRequestException('Invalid token type hint');
+    }
+    // No direct output, but a success response is implied by the absence of exceptions
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
