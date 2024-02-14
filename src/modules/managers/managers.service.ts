@@ -8,7 +8,7 @@ import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse, SuccessRespo
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { LogoutManagerRequest } from './dto/logout-manager.dto';
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
-import { sendPasswordResetEmail } from './utils/email.util';
+import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util'; // Updated to include sendConfirmationEmail
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
@@ -32,7 +32,30 @@ export class ManagersService {
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
-    // Existing confirmResetPassword implementation
+    const { token, password } = request;
+
+    const manager = await this.managersRepository.findOne({ where: { reset_password_token: token } });
+    if (!manager) {
+      throw new BadRequestException('Token is not valid');
+    }
+
+    const resetPasswordExpireInHours = 1; // This value should be replaced with the actual value from your project configuration
+    const expirationDate = new Date(manager.reset_password_sent_at);
+    expirationDate.setHours(expirationDate.getHours() + resetPasswordExpireInHours);
+
+    if (new Date() > expirationDate) {
+      throw new BadRequestException('Token is expired');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    manager.reset_password_token = '';
+    manager.reset_password_sent_at = null;
+    manager.password = hashedPassword;
+
+    await this.managersRepository.save(manager);
+
+    return { message: 'Password reset successfully' };
   }
 
   async requestPasswordReset(email: string): Promise<SuccessResponse> {
