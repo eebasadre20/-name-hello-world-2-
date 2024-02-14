@@ -1,4 +1,3 @@
-import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Manager } from 'src/entities/manager'; // Assuming Manager entity exists
 import { ManagersService } from './managers.service';

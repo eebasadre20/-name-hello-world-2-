@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsISO8601 } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class RefreshTokenRequest {
   @IsString()
@@ -11,11 +11,11 @@ export class RefreshTokenRequest {
 
   @IsString()
   @IsNotEmpty()
-  client_id: string; // Ensuring client_id is validated
+  client_id: string;
 
   @IsString()
   @IsNotEmpty()
-  client_secret: string; // Ensuring client_secret is validated
+  client_secret: string;
 }
 
 export class RefreshTokenResponse {
@@ -35,7 +35,6 @@ export class RefreshTokenResponse {
   @IsNotEmpty()
   resource_id: string;
 
-  @IsNumber()
   @IsNotEmpty()
   expires_in: number;
 
@@ -47,11 +46,9 @@ export class RefreshTokenResponse {
   @IsNotEmpty()
   scope: string;
 
-  @IsISO8601()
   @IsNotEmpty()
   created_at: string;
 
-  @IsNumber()
   @IsNotEmpty()
   refresh_token_expires_in: number;
 }
