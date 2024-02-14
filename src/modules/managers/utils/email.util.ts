@@ -25,8 +25,8 @@ export class EmailUtil {
     }
   }
 
-  async sendPasswordResetEmail(email: string, token: string, name: string): Promise<void> {
-    const passwordResetUrl = `http://yourfrontend.com/reset-password?token=${token}`;
+  async sendPasswordResetEmail(email: string, token: string, name: string = "User"): Promise<void> {
+    const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${token}`;
     try {
       await this.mailerService.sendMail({
         to: email,
@@ -36,12 +36,12 @@ export class EmailUtil {
           name: name,
           url: passwordResetUrl,
           token: token,
-          link: passwordResetUrl, // Assuming 'link' is the same as 'url' for simplicity
+          // Removed the 'link' from the context as it was redundant with 'url'
         },
       });
     } catch (error) {
       console.error('Error sending password reset email', error);
-      throw new Error('Error sending password reset email');
+      throw new Error('Error sending password reset email'); // Added throw to match the confirmation email method's error handling
     }
   }
 }
