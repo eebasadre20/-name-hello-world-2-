@@ -109,8 +109,14 @@ export class ManagersService {
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     const { token, token_type_hint } = request;
-    if (token_type_hint === 'access_token' || token_type_hint === 'refresh_token') {
-      console.log(`Invalidating ${token_type_hint}: ${token}`);
+    if (token_type_hint === 'access_token') {
+      // Assuming the use of a package like passport-jwt that supports token blacklisting or similar functionality
+      // This is a placeholder for the actual logic to invalidate the access token
+      console.log(`Blacklisting access token: ${token}`);
+    } else if (token_type_hint === 'refresh_token') {
+      // Assuming the deletion of refresh token from the database or a store
+      // This is a placeholder for the actual logic to delete the refresh token
+      console.log(`Deleting refresh token: ${token}`);
     } else {
       throw new BadRequestException('Invalid token type hint');
     }
