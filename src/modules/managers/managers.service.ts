@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Manager } from 'src/entities/managers';
@@ -12,9 +12,9 @@ import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.uti
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import { validateTokenExpiration, validateLoginRequest } from './utils/validation.util'; // Kept both validation utils
+import { validateTokenExpiration, validateLoginRequest } from './utils/validation.util';
 import { comparePassword } from './utils/password.util';
-import { generateTokens, generateAccessToken, generateRefreshToken } from './utils/token.util'; // Kept combined token utils
+import { generateTokens, generateAccessToken, generateRefreshToken } from './utils/token.util';
 
 @Injectable()
 export class ManagersService {
@@ -28,27 +28,22 @@ export class ManagersService {
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Assuming there's a method to validate the refresh token. This is a placeholder.
     const isValidToken = true; // This should be replaced with actual validation logic
     if (!isValidToken) {
       throw new BadRequestException('Refresh token is not valid');
     }
 
-    // Assuming there's a method to find a manager by refresh token. This is a placeholder.
     const manager = await this.managersRepository.findOne({ where: { refresh_token: request.refresh_token } });
     if (!manager) {
       throw new BadRequestException('Refresh token is not valid');
     }
 
-    // Delete the old refresh token
     manager.refresh_token = ''; // Assuming the refresh token is stored in the manager entity
     await this.managersRepository.save(manager);
 
-    // Generate new tokens
     const newAccessToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
     const newRefreshToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_REFRESH_SECRET, { expiresIn: `${request.remember_in_hours}h` });
 
-    // Assuming we update the manager with the new refresh token
     manager.refresh_token = newRefreshToken;
     await this.managersRepository.save(manager);
 
@@ -111,8 +106,7 @@ export class ManagersService {
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
-    // Validate the login input
-    const validationResult = validateLoginRequest(request.email, request.password); // Used validateLoginRequest directly as it's the updated validation logic
+    const validationResult = validateLoginRequest(request.email, request.password);
     if (!validationResult.isValid) {
       throw new BadRequestException(validationResult.errorMessage);
     }
@@ -127,7 +121,7 @@ export class ManagersService {
     if (!passwordIsValid) {
       manager.failed_attempts += 1;
       await this.managersRepository.save(manager);
-      if (manager.failed_attempts >= 5) { // Assuming 5 is the maximum login attempts
+      if (manager.failed_attempts >= 5) {
         manager.locked_at = new Date();
         manager.failed_attempts = 0;
         await this.managersRepository.save(manager);
@@ -141,7 +135,7 @@ export class ManagersService {
     }
 
     if (manager.locked_at) {
-      const unlockInHours = 24; // Assuming 24 hours to unlock
+      const unlockInHours = 24;
       const lockedTime = new Date(manager.locked_at).getTime();
       const currentTime = new Date().getTime();
       if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
@@ -153,19 +147,19 @@ export class ManagersService {
     manager.failed_attempts = 0;
     await this.managersRepository.save(manager);
 
-    const tokens = generateTokens(manager.id); // Use combined token generation logic
-    const remember_in_hours = 48; // Assuming 48 hours for refresh token expiration
+    const tokens = generateTokens(manager.id);
+    const remember_in_hours = 48;
 
     return {
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       resource_owner: 'managers',
       resource_id: manager.id.toString(),
-      expires_in: 86400, // 24 hours in seconds
+      expires_in: 86400,
       token_type: 'Bearer',
       scope: 'managers',
       created_at: new Date().toISOString(),
-      refresh_token_expires_in: remember_in_hours * 3600, // convert hours to seconds
+      refresh_token_expires_in: remember_in_hours * 3600,
     };
   }
 
