@@ -36,7 +36,19 @@ export class ManagersService {
   }
 
   async requestPasswordReset(email: string): Promise<SuccessResponse> {
-    // Existing requestPasswordReset implementation
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetUrl);
+    }
+
+    return { message: "If an account with that email was found, we've sent a password reset link to it." };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
@@ -45,20 +57,13 @@ export class ManagersService {
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
     const { token, token_type_hint } = request;
-    // Assuming the use of a hypothetical token management service for demonstration purposes
     if (token_type_hint === 'access_token') {
-      // Here you would call your token management service to blacklist the access token
       console.log(`Blacklisting access token: ${token}`);
-      // Example: tokenManagementService.blacklistAccessToken(token);
     } else if (token_type_hint === 'refresh_token') {
-      // Here you would call your token management service or database to delete the refresh token
       console.log(`Deleting refresh token: ${token}`);
-      // Example: tokenManagementService.deleteRefreshToken(token);
     } else {
       throw new BadRequestException('Invalid token type hint');
     }
-    // No need to return anything as the function's output is void
-    // However, in a real-world scenario, you might want to ensure that the token has been successfully blacklisted or deleted before proceeding
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
