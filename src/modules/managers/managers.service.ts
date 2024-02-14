@@ -6,7 +6,7 @@ import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manage
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse, SuccessResponse } from './dto/confirm-reset-password.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
-import { LogoutManagerRequest } from './dto/logout-manager.dto'; // Adjusted import for LogoutManagerResponse
+import { LogoutManagerRequest, LogoutManagerResponse } from './dto/logout-manager.dto'; // Combined import for LogoutManagerResponse
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
 import { sendPasswordResetEmail, sendConfirmationEmail } from './utils/email.util'; // Combined email util imports
 import * as bcrypt from 'bcrypt';
@@ -29,7 +29,41 @@ export class ManagersService {
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Existing refreshToken implementation
+    // Validate the input using the DTO
+    const { refresh_token, scope } = request;
+
+    // Check if the refresh token is valid
+    const manager = await this.managersRepository.findOne({ where: { refresh_token } });
+    if (!manager) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    // Delete the old refresh token
+    manager.refresh_token = null;
+    await this.managersRepository.save(manager);
+
+    // Generate new tokens
+    const newAccessToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const newRefreshToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_REFRESH_SECRET, { expiresIn: `${request.remember_in_hours}h` });
+
+    // Update manager with new refresh token
+    manager.refresh_token = newRefreshToken;
+    await this.managersRepository.save(manager);
+
+    // Prepare the response
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: scope,
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: request.remember_in_hours * 3600, // convert hours to seconds
+    };
+
+    return response;
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
@@ -44,7 +78,7 @@ export class ManagersService {
     // Existing loginManager implementation
   }
 
-  async logoutManager(request: LogoutManagerRequest): Promise<void> {
+  async logoutManager(request: LogoutManagerRequest): Promise<LogoutManagerResponse | void> {
     // Validate the input parameters using the DTO
     if (!request.token || !request.token_type_hint) {
       throw new BadRequestException('Token and token type hint are required');
@@ -59,6 +93,7 @@ export class ManagersService {
     // Note: Since the requirement specifies to send status 200 without direct output, 
     // the actual sending of the HTTP status should be handled by the controller.
     // This service method ensures the business logic is encapsulated and separated from the HTTP layer.
+    return; // Adjusted to match the existing code's return type for this method.
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
