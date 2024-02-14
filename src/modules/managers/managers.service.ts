@@ -12,7 +12,7 @@ import { sendPasswordResetEmail, sendConfirmationEmail } from './utils/email.uti
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import { validateLoginRequest } from './utils/validation.util';
+import { validateLoginInput, validateLoginRequest } from './utils/validation.util'; // Merged validation utils
 import { comparePassword } from './utils/password.util';
 import { generateTokens } from './utils/token.util';
 import * as moment from 'moment';
@@ -29,10 +29,46 @@ export class ManagersService {
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // Existing refreshToken implementation
+    // New refreshToken implementation from new code
+    // Validate the refresh token
+    const manager = await this.managersRepository.findOne({
+      where: { refresh_token: request.refresh_token },
+    });
+    if (!manager) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    // Delete the old refresh token
+    manager.refresh_token = null;
+    await this.managersRepository.save(manager);
+
+    // Generate new tokens
+    const rememberInHours = parseInt(request.scope.replace(/\D/g, ''), 10); // Extracting hours from scope
+    const accessToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const refreshToken = jwt.sign({ id: manager.id, email: manager.email }, process.env.JWT_REFRESH_SECRET, { expiresIn: `${rememberInHours}h` });
+
+    // Update manager with new refresh token
+    manager.refresh_token = refreshToken;
+    await this.managersRepository.save(manager);
+
+    // Prepare the response
+    const response: RefreshTokenResponse = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: request.scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: rememberInHours * 3600, // Convert hours to seconds
+    };
+
+    return response;
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<SuccessResponse | ConfirmResetPasswordResponse> {
+    // Existing confirmResetPassword implementation from existing code
     const manager = await this.managersRepository.findOne({ where: { reset_password_token: request.token } });
     if (!manager) {
       throw new BadRequestException('Token is not valid');
@@ -53,6 +89,7 @@ export class ManagersService {
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string } | SuccessResponse> {
+    // Existing requestPasswordReset implementation from existing code
     const manager = await this.managersRepository.findOne({ where: { email } });
     if (manager) {
       const passwordResetToken = randomBytes(32).toString('hex');
@@ -69,6 +106,7 @@ export class ManagersService {
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
+    // Merged loginManager implementation, keeping the validation and error handling from new code and logic from existing code
     if (!validateLoginRequest(request.email, request.password)) {
       throw new BadRequestException('Invalid email or password format');
     }

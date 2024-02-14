@@ -8,14 +8,6 @@ export class RefreshTokenRequest {
   @IsString()
   @IsNotEmpty()
   scope: string;
-
-  @IsString()
-  @IsNotEmpty()
-  client_id: string;
-
-  @IsString()
-  @IsNotEmpty()
-  client_secret: string;
 }
 
 export class RefreshTokenResponse {
