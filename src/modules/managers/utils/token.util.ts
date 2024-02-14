@@ -25,14 +25,18 @@ export const generateRefreshToken = (user: Manager, rememberInHours: number): st
   );
 };
 
-export const generateTokens = (user: Manager, rememberInHours: number) => {
+export const generateTokens = (managerId: string, rememberInHours: number) => {
+  // Assuming the existence of a function to fetch the manager's details using managerId
+  // This is a placeholder function. Replace it with the actual function to fetch manager details.
+  const manager = fetchManagerDetails(managerId); // Placeholder function
+
   const accessTokenExpiresIn = 24 * 60 * 60; // 24 hours in seconds
   const refreshTokenExpiresIn = rememberInHours * 60 * 60; // Convert hours to seconds based on remember_in_hours
 
   const access_token = sign(
     { 
-      id: user.id, 
-      email: user.email, // Include email in the payload for more detailed claims
+      id: manager.id, 
+      email: manager.email, // Include email in the payload for more detailed claims
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: accessTokenExpiresIn }
@@ -40,8 +44,8 @@ export const generateTokens = (user: Manager, rememberInHours: number) => {
 
   const refresh_token = sign(
     { 
-      id: user.id, 
-      email: user.email, // Include email in the payload for more detailed claims
+      id: manager.id, 
+      email: manager.email, // Include email in the payload for more detailed claims
     },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: refreshTokenExpiresIn }
@@ -54,3 +58,14 @@ export const generateTokens = (user: Manager, rememberInHours: number) => {
     refresh_token_expires_in: refreshTokenExpiresIn,
   };
 };
+
+// Placeholder function for fetching manager details. Replace with actual implementation.
+function fetchManagerDetails(managerId: string): Manager {
+  // Implementation to fetch manager details from the database or any data source
+  // This is just a placeholder. Replace it with actual data fetching logic.
+  return {
+    id: managerId,
+    email: 'manager@example.com',
+    // other manager properties
+  } as Manager;
+}
