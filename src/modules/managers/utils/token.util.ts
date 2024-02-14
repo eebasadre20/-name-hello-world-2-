@@ -25,19 +25,24 @@ export const generateRefreshToken = (user: Manager, rememberInHours: number): st
   );
 };
 
-// Existing function to generate both access and refresh tokens remains unchanged
-export const generateTokens = (userId: string) => {
+export const generateTokens = (user: Manager) => {
   const accessTokenExpiresIn = 24 * 60 * 60; // 24 hours in seconds
   const refreshTokenExpiresIn = 30 * 24 * 60 * 60; // 30 days in seconds
 
   const access_token = sign(
-    { id: userId },
+    { 
+      id: user.id, 
+      email: user.email, // Include email in the payload for more detailed claims
+    },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: accessTokenExpiresIn }
   );
 
   const refresh_token = sign(
-    { id: userId },
+    { 
+      id: user.id, 
+      email: user.email, // Include email in the payload for more detailed claims
+    },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: refreshTokenExpiresIn }
   );
