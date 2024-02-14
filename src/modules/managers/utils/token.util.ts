@@ -25,9 +25,9 @@ export const generateRefreshToken = (user: Manager, rememberInHours: number): st
   );
 };
 
-export const generateTokens = (user: Manager) => {
+export const generateTokens = (user: Manager, rememberInHours: number) => {
   const accessTokenExpiresIn = 24 * 60 * 60; // 24 hours in seconds
-  const refreshTokenExpiresIn = 30 * 24 * 60 * 60; // 30 days in seconds
+  const refreshTokenExpiresIn = rememberInHours * 60 * 60; // Convert hours to seconds based on remember_in_hours
 
   const access_token = sign(
     { 

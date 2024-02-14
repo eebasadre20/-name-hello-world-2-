@@ -14,7 +14,7 @@ import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import { validateTokenExpiration, validateLoginRequest } from './utils/validation.util';
 import { comparePassword } from './utils/password.util';
-import { generateTokens, generateAccessToken, generateRefreshToken } from './utils/token.util';
+import { generateAccessToken, generateRefreshToken } from './utils/token.util';
 
 @Injectable()
 export class ManagersService {
@@ -64,7 +64,62 @@ export class ManagersService {
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
-    // Existing loginManager implementation
+    // Validate the login input
+    const validationError = validateLoginRequest(request.email, request.password);
+    if (validationError) {
+      throw new BadRequestException(validationError);
+    }
+
+    const manager = await this.managersRepository.findOne({ where: { email: request.email } });
+
+    if (!manager) {
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    const passwordIsValid = await comparePassword(request.password, manager.password);
+    if (!passwordIsValid) {
+      manager.failed_attempts += 1;
+      await this.managersRepository.save(manager);
+      if (manager.failed_attempts >= 5) { // Assuming 5 is the maximum login attempts
+        manager.locked_at = new Date();
+        manager.failed_attempts = 0;
+        await this.managersRepository.save(manager);
+        throw new BadRequestException('User is locked');
+      }
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    if (!manager.confirmed_at) {
+      throw new BadRequestException('User is not confirmed');
+    }
+
+    if (manager.locked_at) {
+      const unlockInHours = 24; // Assuming 24 hours to unlock
+      const lockedTime = new Date(manager.locked_at).getTime();
+      const currentTime = new Date().getTime();
+      if (currentTime - lockedTime < unlockInHours * 60 * 60 * 1000) {
+        throw new BadRequestException('User is locked');
+      }
+      manager.locked_at = null;
+    }
+
+    manager.failed_attempts = 0;
+    await this.managersRepository.save(manager);
+
+    const accessToken = generateAccessToken(manager.id);
+    const refreshToken = generateRefreshToken(manager.id, 48); // Assuming 48 hours for refresh token expiration
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      resource_owner: 'managers',
+      resource_id: manager.id.toString(),
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: 'managers',
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: 172800, // 48 hours in seconds
+    };
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<void> {
