@@ -7,6 +7,7 @@ export const generateAccessToken = (user: Manager): string => {
     {
       id: user.id,
       email: user.email,
+      // Additional claims can be added here if necessary
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn }
@@ -19,6 +20,7 @@ export const generateRefreshToken = (user: Manager, rememberInHours: number): st
     {
       id: user.id,
       email: user.email,
+      // Additional claims can be added here if necessary
     },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn }
@@ -58,7 +60,6 @@ export const generateTokens = (managerId: string, rememberInHours: number) => {
   };
 };
 
-// This function fetchManagerDetails needs to be implemented to fetch manager details from the database or any data source
 function fetchManagerDetails(managerId: string): Manager {
   // Implementation to fetch manager details from the database or any data source
   // This should be replaced with actual data fetching logic.
