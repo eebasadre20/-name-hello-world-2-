@@ -13,9 +13,9 @@ export class ConfirmResetPasswordRequest {
 }
 
 export class ConfirmResetPasswordResponse {
-  message: string;
+  message?: string; // Made optional to match the requirement
 
-  constructor(message: string) {
+  constructor(message?: string) {
     this.message = message;
   }
 }
