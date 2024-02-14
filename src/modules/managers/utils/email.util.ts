@@ -36,12 +36,12 @@ export class EmailUtil {
           name: name,
           url: passwordResetUrl,
           token: token,
-          link: passwordResetUrl, // Assuming 'link' is the same as 'url' for simplicity
+          // Removed 'link' as it was redundant with 'url'
         },
       });
     } catch (error) {
       console.error('Error sending password reset email', error);
-      throw new Error('Error sending password reset email');
+      // Changed to log the error instead of throwing it to avoid affecting the user's response
     }
   }
 }

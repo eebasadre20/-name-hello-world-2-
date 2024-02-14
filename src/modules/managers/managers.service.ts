@@ -14,7 +14,7 @@ import * as jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import { validateTokenExpiration, validateLoginRequest } from './utils/validation.util';
 import { comparePassword } from './utils/password.util';
-import { generateAccessToken, generateRefreshToken } from './utils/token.util';
+import { generateTokens, generateAccessToken, generateRefreshToken } from './utils/token.util';
 
 @Injectable()
 export class ManagersService {
@@ -60,7 +60,19 @@ export class ManagersService {
   }
 
   async requestPasswordReset(email: string): Promise<SuccessResponse> {
-    // Existing requestPasswordReset implementation
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetUrl);
+    }
+
+    return { message: "If an account with that email was found, we've sent a password reset link to it." };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
