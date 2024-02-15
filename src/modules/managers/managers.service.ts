@@ -1,7 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomBytes } from 'crypto';
-import { validate as isEmailValid } from 'email-validator';
 import { Manager } from '../../entities/managers';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
@@ -11,15 +9,11 @@ import { LogoutManagerRequest, LogoutManagerDto } from './dto/logout-manager.dto
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
-import { hashPassword, comparePassword } from './utils/password.util';
-import { generateAccessToken, generateRefreshToken, generateConfirmationToken } from './utils/token.util';
-import { validateTokenExpiration } from './utils/validation.util';
 import { ConfigService } from '@nestjs/config';
 import { AccessTokenRepository } from 'src/repositories/access-tokens.repository';
 import { EmailUtil } from './utils/email.util';
-import config from 'src/configs';
-import { SuccessResponse } from './dto/success-response.dto'; // Assuming SuccessResponse DTO exists
-import { RequestPasswordResetDTO } from './dto/request-password-reset.dto'; // Assuming RequestPasswordResetDTO exists
+import { SuccessResponse } from './dto/success-response.dto';
+import { RequestPasswordResetDTO } from './dto/request-password-reset.dto';
 
 @Injectable()
 export class ManagersService {
@@ -28,6 +22,7 @@ export class ManagersService {
     private managersRepository: Repository<Manager>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    @InjectRepository(AccessTokenRepository)
     private accessTokenRepository: AccessTokenRepository,
     private refreshTokenRepository: AccessTokenRepository, // Assuming similar repository for refresh tokens
     private emailUtil: EmailUtil,
@@ -43,6 +38,7 @@ export class ManagersService {
 
   async logoutManager(request: LogoutManagerRequest | LogoutManagerDto): Promise<void> {
     // ... existing implementation of logoutManager ...
+    // The new code's implementation of logoutManager is not needed as it is a duplicate
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<ConfirmResetPasswordResponse> {
@@ -51,7 +47,6 @@ export class ManagersService {
 
   async requestPasswordReset(requestPasswordResetDto: RequestPasswordResetDTO): Promise<SuccessResponse> {
     // ... existing implementation of requestPasswordReset ...
-    // Updated to match the new code's return type of SuccessResponse
   }
 
   async loginManager(loginRequest: LoginRequest): Promise<LoginResponse> {

@@ -3,7 +3,7 @@ import { IsString, IsNotEmpty, IsIn } from 'class-validator';
 
 export class LogoutManagerDto {
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'token is required' })
   token: string;
 
   @IsString()
