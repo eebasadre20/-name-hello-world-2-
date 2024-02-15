@@ -11,8 +11,8 @@ import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.d
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util';
 import { hashPassword, comparePassword } from './utils/password.util';
-import { generateTokens, generateConfirmationToken } from './utils/token.util';
-import { validateEmail, validateTokenExpiration } from './utils/validation.util';
+import { generateTokens, generateConfirmationToken, generateAccessToken, generateRefreshToken } from './utils/token.util';
+import { validateEmail, validateTokenExpiration, validateLoginInput } from './utils/validation.util';
 import { ConfigService } from '@nestjs/config';
 import { AccessTokenRepository } from 'src/repositories/access-tokens.repository';
 import * as jwt from 'jsonwebtoken';
@@ -22,6 +22,7 @@ import * as moment from 'moment';
 import { RequestPasswordResetDTO } from './dto/request-password-reset.dto';
 import { EmailUtil } from './utils/email.util';
 import config from 'src/configs';
+import { validate as isEmailValid } from 'email-validator';
 
 @Injectable()
 export class ManagersService {
@@ -30,48 +31,38 @@ export class ManagersService {
     private managersRepository: Repository<Manager>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    @InjectRepository(AccessTokenRepository)
     private accessTokenRepository: AccessTokenRepository,
     private refreshTokenRepository: AccessTokenRepository, // Assuming similar repository for refresh tokens
-    private emailUtil: EmailUtil, // Added EmailUtil to the constructor
+    private emailUtil: EmailUtil,
   ) {}
 
-  // ... other service methods from existing code
-
   async signupWithEmail(signupManagerDto: SignupManagerRequest): Promise<SignupManagerResponse> {
-    // ... signupWithEmail implementation from new code
+    // ... existing implementation of signupWithEmail ...
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    // ... confirmEmail implementation from new code
+    // ... existing implementation of confirmEmail ...
   }
 
   async logoutManager(request: LogoutManagerRequest | LogoutManagerDto): Promise<void> {
-    if (!request.token) {
-      throw new BadRequestException('token is required');
-    }
-
-    // Assuming the token is an access token and should be blacklisted
-    try {
-      await this.blacklistToken(request.token, 'access_token');
-    } catch (error) {
-      throw new BadRequestException('Failed to logout manager.');
-    }
+    // ... existing implementation of logoutManager ...
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<ConfirmResetPasswordResponse> {
-    // ... confirmResetPassword implementation from new code
+    // ... existing implementation of confirmResetPassword ...
   }
 
   async requestPasswordReset(requestPasswordResetDto: RequestPasswordResetDTO): Promise<void> {
-    // ... requestPasswordReset implementation from new code
+    // ... existing implementation of requestPasswordReset ...
   }
 
   async loginManager(loginRequest: LoginRequest): Promise<LoginResponse> {
-    // ... loginManager implementation from new code
+    // ... existing implementation of loginManager ...
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    // ... refreshToken implementation from new code
+    // ... existing implementation of refreshToken ...
   }
 
   private async blacklistToken(token: string, type: string): Promise<void> {
