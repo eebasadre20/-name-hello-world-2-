@@ -12,5 +12,5 @@ export class LogoutManagerRequest {
 }
 
 export class LogoutManagerResponse {
-  status: 200;
+  status: number = 200; // Updated to add a default value for status
 }
