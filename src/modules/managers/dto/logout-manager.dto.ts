@@ -1,6 +1,9 @@
+
 import { IsString, IsNotEmpty, IsIn } from 'class-validator';
 
 export class LogoutManagerDto {
+  @IsString()
+  @IsNotEmpty()
   token: string;
 
   @IsString()
