@@ -1,4 +1,4 @@
-import {
+ {
   registerDecorator,
   ValidationArguments,
   ValidationOptions,
@@ -7,6 +7,7 @@ import {
 } from 'class-validator'
 import { Injectable } from '@nestjs/common'
 import { EntitySchema, Not, DataSource, ObjectType, FindOptionsWhere } from 'typeorm'
+import { SignupManagerRequest } from '../../modules/managers/dto/signup-manager.dto'; // Import SignupManagerRequest
 
 export interface UniqueValidationArguments<E> extends ValidationArguments {
   constraints: [EntitySchema<E> | ObjectType<E>]
@@ -57,3 +58,5 @@ export function EntityUnique<E>(
     })
   }
 }
+
+EntityUnique(Manager)(SignupManagerRequest.prototype, 'email');
