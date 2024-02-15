@@ -12,6 +12,7 @@ import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.uti
 import * as bcrypt from 'bcrypt';
 import * as moment from 'moment';
 import * as jwt from 'jsonwebtoken'; // Corrected import for jwt
+import { randomBytes } from 'crypto';
 import { validateLoginInput } from './utils/validation.util';
 import { comparePassword } from './utils/password.util';
 import { generateTokens } from './utils/token.util';
@@ -24,11 +25,48 @@ export class ManagersService {
   ) {}
 
   async signupWithEmail(request: SignupManagerRequest): Promise<SignupManagerResponse> {
-    // Existing signupWithEmail implementation
+    const { email, password } = request;
+
+    const existingManager = await this.managersRepository.findOne({ where: { email } });
+    if (existingManager) {
+      throw new BadRequestException('Email is already taken');
+    }
+
+    const confirmationToken = randomBytes(32).toString('hex');
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const manager = this.managersRepository.create({
+      email,
+      password: hashedPassword,
+      confirmation_token: confirmationToken,
+      confirmed_at: null,
+    });
+    await this.managersRepository.save(manager);
+
+    const confirmationUrl = `http://yourfrontend.com/confirm-email?confirmation_token=${confirmationToken}`;
+    await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
+
+    return { user: manager };
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    // Existing confirmEmail implementation
+    const { token } = request;
+    const manager = await this.managersRepository.findOne({
+      where: {
+        confirmation_token: token,
+        confirmed_at: null,
+      },
+    });
+
+    if (!manager) {
+      throw new BadRequestException('Confirmation token is not valid');
+    }
+
+    manager.confirmed_at = new Date();
+    await this.managersRepository.save(manager);
+
+    return { user: manager };
   }
 
   async logoutManager(request: LogoutManagerRequest): Promise<LogoutManagerResponse> {
@@ -46,7 +84,19 @@ export class ManagersService {
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string }> {
-    // Existing requestPasswordReset implementation
+    const manager = await this.managersRepository.findOne({ where: { email } });
+    if (manager) {
+      const passwordResetToken = randomBytes(32).toString('hex');
+      manager.reset_password_token = passwordResetToken;
+      manager.reset_password_sent_at = new Date();
+
+      await this.managersRepository.save(manager);
+
+      const passwordResetUrl = `http://yourfrontend.com/reset-password?reset_token=${passwordResetToken}`;
+      await sendPasswordResetEmail(email, passwordResetToken, manager.name, passwordResetUrl);
+    }
+
+    return { message: "Success" };
   }
 
   async loginManager(request: LoginRequest): Promise<LoginResponse> {
@@ -56,20 +106,7 @@ export class ManagersService {
 
     const manager = await this.managersRepository.findOne({ where: { email: request.email } });
 
-    if (!manager) {
-      throw new BadRequestException('Email or password is not valid');
-    }
-
-    const passwordMatch = await comparePassword(request.password, manager.password);
-    if (!passwordMatch) {
-      manager.failed_attempts += 1;
-      await this.managersRepository.save(manager);
-      if (manager.failed_attempts >= 5) {
-        manager.locked_at = new Date();
-        manager.failed_attempts = 0;
-        await this.managersRepository.save(manager);
-        throw new BadRequestException('User is locked');
-      }
+    if (!manager || !(await bcrypt.compare(request.password, manager.password))) {
       throw new BadRequestException('Email or password is not valid');
     }
 
