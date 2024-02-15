@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import { EmailService } from '../../../shared/email/email.service';
 
@@ -32,7 +31,7 @@ export class EmailUtil {
       await this.emailService.sendMail({
         to: email,
         subject: 'Password Reset Request',
-        template: './email_reset_password',
+        template: 'email_reset_password', // Removed the './' from the template path to match the new code
         context: {
           name: name,
           url: passwordResetUrl,
