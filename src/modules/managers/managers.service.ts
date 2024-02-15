@@ -6,6 +6,7 @@ import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manage
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
 import { sendConfirmationEmail } from './utils/email.util';
 import * as bcrypt from 'bcrypt';
+import * as moment from 'moment';
 import { randomBytes } from 'crypto';
 
 @Injectable()
@@ -54,11 +55,17 @@ export class ManagersService {
       throw new BadRequestException('Confirmation token is not valid');
     }
 
+    const emailExpiredInHours = 24; // Assuming 24 hours for email token expiration, replace with actual value if different
+    const isTokenExpired = moment(manager.confirmation_sent_at).add(emailExpiredInHours, 'hours').isBefore(moment());
+    if (isTokenExpired) {
+      throw new BadRequestException('Confirmation token is expired');
+    }
+
     manager.confirmed_at = new Date();
     await this.managersRepository.save(manager);
 
     return { user: manager };
   }
 
-  // Placeholder for other service methods
+  // Placeholder for other service methods...
 }
