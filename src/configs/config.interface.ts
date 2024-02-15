@@ -1,5 +1,8 @@
+
 import { NODE_ENV } from 'src/constants'
 import { StorageModuleOptions } from '@codebrew/nestjs-storage'
+import { Manager } from 'src/entities/managers.ts' // Assuming the Manager entity is in this path
+
 export interface Config {
   app: AppConfig
   database: DatabaseConfig
@@ -125,10 +128,13 @@ export interface AuthenticationConfig {
   resetPasswordUrl: string
   resetPasswordIn: number
   passwordPattern?: string | RegExp
-  maximumAttempts?: number
-  unlockIn?: string
+  maximumAttempts: number
+  unlockIn: number
   unlockStrategy?: string
   unlockAccessUrl?: string
 }
+
+// Add any additional configurations that are necessary for the JWT token generation
+// and the authentication flow as per the requirements.
 
 export interface StorageConfig extends StorageModuleOptions {}
