@@ -1,16 +1,15 @@
 
 import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
-import { IsPassword } from '../../../shared/validators/is-password.validator';
-import { IsEqualTo } from '../../../shared/validators/is-equal-to.validator';
+import { IsPassword, IsEqualTo } from '../../../shared/validators/is-password.validator';
 
 export class SignupManagerDto {
   @IsEmail({}, { message: 'Email is invalid' })
   @IsNotEmpty({ message: 'Email is required' })
   email: string;
 
-  @IsPassword({ message: 'Password is invalid' })
+  @IsPassword({ pattern: '{{password_regex}}', message: 'Password is invalid' })
   @IsNotEmpty({ message: 'Password is required' })
-  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @MinLength({{password_min_length}}, { message: 'Password must be at least {{password_min_length}} characters long' })
   password: string;
 
   @IsEqualTo('password', { message: 'Password confirmation does not match' })
