@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Manager } from 'src/entities/managers';
 import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
-import { LogoutManagerRequest } from './dto/logout-manager.dto';
+import { LogoutManagerRequest, LogoutManagerDto } from './dto/logout-manager.dto'; // Combined import for LogoutManagerRequest and LogoutManagerDto
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
@@ -30,8 +30,7 @@ export class ManagersService {
     private managersRepository: Repository<Manager>,
     private jwtService: JwtService,
     private configService: ConfigService,
-    private accessTokenRepository: AccessTokenRepository, // Assuming this is needed for other methods not shown here
-    // Placeholder for the refreshTokenRepository. Replace with your actual implementation.
+    private accessTokenRepository: AccessTokenRepository,
     private refreshTokenRepository = new AccessTokenRepository(), // Assuming similar repository for refresh tokens
   ) {}
 
@@ -43,8 +42,17 @@ export class ManagersService {
     // ... confirmEmail implementation from new code
   }
 
-  async logoutManager(request: LogoutManagerRequest): Promise<void> {
-    // ... logoutManager implementation from existing code
+  async logoutManager(request: LogoutManagerRequest | LogoutManagerDto): Promise<void> {
+    if (!request.token) {
+      throw new BadRequestException('token is required');
+    }
+
+    // Assuming the token is an access token and should be blacklisted
+    try {
+      await this.blacklistToken(request.token, 'access_token');
+    } catch (error) {
+      throw new BadRequestException('Failed to logout manager.');
+    }
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<ConfirmResetPasswordResponse> {
@@ -57,15 +65,12 @@ export class ManagersService {
 
   async loginManager(loginRequest: LoginRequest): Promise<LoginResponse> {
     // ... loginManager implementation from new code
-    // The method name and implementation have been updated to match the new code.
-    // The logic is the same as the emailLogin method from the new code.
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
     // ... refreshToken implementation from new code
   }
 
-  // Placeholder for the blacklistToken function. Replace with your actual implementation.
   private async blacklistToken(token: string, type: string): Promise<void> {
     // Logic to blacklist the token
   }
