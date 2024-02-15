@@ -76,6 +76,7 @@ export default (): Config => {
       sendConfirmationEmail: Boolean(process.env.AUTH_SEND_CONFIRMATION_EMAIL) || false,
       confirmationUrl: process.env.AUTH_CONFIRMATION_URL || 'http://localhost:3000/confirm',
       confirmationIn: +process.env.AUTH_CONFIRMATION_IN || 24,
+      emailExpiredIn: +process.env.AUTH_EMAIL_EXPIRED_IN || 24,
       resetPasswordUrl:
         process.env.AUTH_RESET_PASSWORD_URL || 'http://localhost:3000/reset-password',
       resetPasswordIn: +process.env.AUTH_RESET_PASSWORD_IN || 1,
