@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Manager } from 'src/entities/managers';
-import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
+import { SignupManagerRequest, SignupManagerResponse, ManagerResponse } from './dto/signup-manager.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse, SuccessResponse } from './dto/confirm-reset-password.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
@@ -24,7 +24,37 @@ export class ManagersService {
     private managersRepository: Repository<Manager>,
   ) {}
 
-  // ... other service methods
+  async signupWithEmail(request: SignupManagerRequest): Promise<ManagerResponse> {
+    const { email, password } = request;
+
+    // Check if the email is already taken
+    const existingManager = await this.managersRepository.findOne({ where: { email } });
+    if (existingManager) {
+      throw new BadRequestException('Email is already taken');
+    }
+
+    // Generate a secure random confirmation_token
+    const confirmationToken = randomBytes(32).toString('hex');
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create a new manager record
+    const manager = this.managersRepository.create({
+      email,
+      password: hashedPassword,
+      confirmation_token: confirmationToken,
+      confirmed_at: null,
+    });
+    await this.managersRepository.save(manager);
+
+    // Send a confirmation email
+    const confirmationUrl = `http://yourfrontend.com/confirm-email?confirmation_token=${confirmationToken}`;
+    await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
+
+    // Return the created manager record
+    return { user: manager };
+  }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
     const { token } = request;
@@ -50,4 +80,6 @@ export class ManagersService {
 
     return { user: manager };
   }
+
+  // ... other service methods including those from the existing code that are not conflicting
 }
