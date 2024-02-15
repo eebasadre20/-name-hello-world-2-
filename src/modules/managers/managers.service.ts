@@ -40,10 +40,31 @@ export class ManagersService {
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    // ... implementation from new code
+    const { token } = request;
+    const manager = await this.managersRepository.findOne({
+      where: {
+        confirmation_token: token,
+        confirmed_at: null,
+      },
+    });
+
+    if (!manager) {
+      throw new BadRequestException('Confirmation token is not valid');
+    }
+
+    const emailExpiredIn = this.configService.get<number>('authentication.emailExpiredIn'); // Use configService to get the expiration time
+    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, emailExpiredIn); // Use the retrieved value for token expiration validation
+    if (isTokenExpired) {
+      throw new BadRequestException('Confirmation token is expired');
+    }
+
+    manager.confirmed_at = new Date();
+    await this.managersRepository.save(manager);
+
+    return { user: manager }; // Updated to match the expected return type
   }
 
-  async logoutManager(request: LogoutManagerRequest | LogoutManagerDto): Promise<void> {
+  async logoutManager(request: LogoutManagerRequest): Promise<void> {
     // ... implementation from new code
   }
 
