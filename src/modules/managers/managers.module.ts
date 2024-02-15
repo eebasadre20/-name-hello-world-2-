@@ -1,18 +1,18 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Manager } from '../../entities/managers'; // Use the corrected import path for Manager entity
+import { Manager } from '../../entities/managers';
 import { ManagersService, ManagersEmailConfirmationService } from './managers.service';
 import { ManagersController } from './managers.controller';
-import { AuthModule } from 'src/auth/auth.module'; // Keep the AuthModule import from the existing code
+import { AuthModule } from 'src/auth/auth.module'; // Keep the AuthModule import for authentication
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Manager]), // Keep the corrected Manager entity registration
-    AuthModule, // Include AuthModule for authentication
+    TypeOrmModule.forFeature([Manager]),
+    AuthModule, // Include AuthModule for authentication purposes
   ],
   providers: [
     ManagersService,
-    ManagersEmailConfirmationService, // Keep the additional service from the existing code
+    ManagersEmailConfirmationService, // Include both services
   ],
   controllers: [ManagersController],
 })

@@ -56,9 +56,18 @@ export class ManagersController {
   }
 
   @Post('/login')
-  async login(@Body() request: LoginRequest): Promise<LoginResponse> {
-    this.validateLoginRequest(request);
-    const loginResponse = await this.managersService.loginManager(request);
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() loginRequest: LoginRequest): Promise<LoginResponse> {
+    if (!loginRequest.email || !loginRequest.scope || !loginRequest.grant_type) {
+      throw new BadRequestException('{field} is required');
+    }
+    if (loginRequest.grant_type === 'password' && (!loginRequest.password || loginRequest.password.length < this.passwordMinLength || !this.passwordRegex.test(loginRequest.password))) {
+      throw new BadRequestException('Password is invalid');
+    }
+    if (loginRequest.grant_type === 'refresh_token' && !loginRequest.refresh_token) {
+      throw new BadRequestException('refresh_token is required');
+    }
+    const loginResponse = await this.managersService.loginManager(loginRequest);
     return {
       access_token: loginResponse.access_token,
       refresh_token: loginResponse.refresh_token,
@@ -66,7 +75,7 @@ export class ManagersController {
       resource_id: loginResponse.resource_id,
       expires_in: loginResponse.expires_in,
       token_type: loginResponse.token_type,
-      scope: request.scope,
+      scope: loginRequest.scope,
       created_at: loginResponse.created_at,
       refresh_token_expires_in: loginResponse.refresh_token_expires_in
     };
@@ -97,23 +106,10 @@ export class ManagersController {
     return this.managersService.confirmEmail(confirmEmailRequest);
   }
 
-  private validateLoginRequest(request: LoginRequest): void {
-    const { email, password, grant_type, scope } = request;
-    if (!email || !scope || !grant_type) {
-      throw new BadRequestException(`${!email ? 'email' : !scope ? 'scope' : 'grant_type'} is required`);
-    }
-    if (grant_type === 'password' && !password) {
-      throw new BadRequestException('password is required');
-    }
-    if (grant_type === 'refresh_token' && !request.refresh_token) {
-      throw new BadRequestException('refresh_token is required');
-    }
-  }
-
   private validateRefreshTokenRequest(request: RefreshTokenRequest): void {
     const { refresh_token, scope } = request;
     if (!refresh_token || !scope) {
-      throw a BadRequestException(`${!refresh_token ? 'refresh_token' : 'scope'} is required`);
+      throw new BadRequestException(`${!refresh_token ? 'refresh_token' : 'scope'} is required`);
     }
   }
 }

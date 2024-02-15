@@ -7,8 +7,8 @@ export class LoginRequest {
 
   @ValidateIf(o => o.grant_type === 'password')
   @IsNotEmpty({ message: 'password is required' })
-  @MinLength(8, { message: 'Password is invalid' })
-  @Matches('{{password_regex}}', { message: 'Password is invalid' })
+  @MinLength({{password_min_length}}, { message: 'Password is invalid' })
+  @Matches(/{{password_regex}}/, { message: 'Password is invalid' })
   password: string;
 
   @IsNotEmpty({ message: 'grant_type is required' })
@@ -41,8 +41,8 @@ export class LoginResponse {
   expires_in: number = 86400; // 24 hours to seconds
   token_type: string = 'Bearer';
   scope: string;
-  created_at: string;
-  refresh_token_expires_in: number;
+  created_at: number;
+  refresh_token_expires_in: number | null;
 }
 
 // Add any additional DTOs or types below if necessary
