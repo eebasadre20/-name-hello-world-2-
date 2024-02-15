@@ -1,4 +1,3 @@
-
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -30,12 +29,8 @@ export class ManagersService {
     const { email, password } = request;
 
     const existingManager = await this.managersRepository.findOne({ where: { email } });
-    if (existingManager) {
-      throw new BadRequestException('Email is already taken');
-    }
-
-    if (!validateEmail(email)) {
-      throw new BadRequestException('Invalid email format');
+    if (existingManager || !validateEmail(email)) {
+      throw new BadRequestException('Email is already taken or invalid');
     }
 
     const hashedPassword = await hashPassword(password);
@@ -61,23 +56,25 @@ export class ManagersService {
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
     const { token } = request;
-    if (!validateTokenExpiration(token)) {
-      throw new BadRequestException('Invalid token format');
-    }
     const manager = await this.managersRepository.findOne({
       where: {
         confirmation_token: token,
         confirmed_at: null,
       },
     });
+
     if (!manager) {
       throw new BadRequestException('Confirmation token is not valid');
     }
-    if (!validateTokenExpiration(manager.confirmation_sent_at, config().authentication.email_expired_in)) {
+
+    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, config().authentication.confirmationIn || config().authentication.email_expired_in);
+    if (isTokenExpired) {
       throw new BadRequestException('Confirmation token is expired');
     }
+
     manager.confirmed_at = new Date();
     await this.managersRepository.save(manager);
+
     return new ConfirmEmailResponse(manager);
   }
 
@@ -85,5 +82,9 @@ export class ManagersService {
     // ... existing loginManager implementation
   }
 
-  // ... other service methods
+  // ... other service methods including those from the existing code that are not conflicting
+
+  private async sendConfirmationEmail(email: string, confirmationToken: string, confirmationUrl: string): Promise<void> {
+    // Logic to send confirmation email
+  }
 }
