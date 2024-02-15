@@ -1,17 +1,22 @@
-import { IsEmail, IsString, MinLength, Matches, IsNotEmpty } from 'class-validator';
+
+import { IsEmail, IsString, IsNotEmpty } from 'class-validator';
+import { IsPassword } from '../../../shared/validators/is-password.validator';
+import { IsEqualTo } from '../../../shared/validators/is-equal-to.validator';
 import { Manager } from '../../entities/managers.ts'; // Import the Manager entity
 
 export class SignupManagerRequest {
-  @IsEmail({}, { message: 'Invalid email format' })
+  @IsEmail({}, { message: 'Email is invalid' })
   @IsNotEmpty({ message: 'Email is required' })
   email: string;
 
-  @IsString({ message: 'Password must be a string' })
-  @MinLength(8, { message: 'Password must be at least 8 characters long' })
-  @Matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/, { message: 'Password must contain at least one letter and one number' })
+  @IsPassword({ message: 'Password is invalid' })
   @IsNotEmpty({ message: 'Password is required' })
   password: string;
 
+  @IsString({ message: 'Password confirmation must be a string' })
+  @IsEqualTo('password', { message: 'Password confirmation does not match' })
+  @IsNotEmpty({ message: 'Password confirmation is required' })
+  password_confirmation: string;
 }
 
 export class SignupManagerResponse {
