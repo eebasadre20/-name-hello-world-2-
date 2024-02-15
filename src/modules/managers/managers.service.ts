@@ -31,7 +31,7 @@ export class ManagersService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private accessTokenRepository: AccessTokenRepository,
-    private refreshTokenRepository = new AccessTokenRepository(), // Assuming similar repository for refresh tokens
+    private refreshTokenRepository: AccessTokenRepository, // Assuming similar repository for refresh tokens
   ) {}
 
   async signupWithEmail(signupManagerDto: SignupManagerRequest): Promise<SignupManagerResponse> {
@@ -64,7 +64,27 @@ export class ManagersService {
   }
 
   async loginManager(loginRequest: LoginRequest): Promise<LoginResponse> {
-    // ... loginManager implementation from new code
+    const manager = await this.managersRepository.findOne({ where: { email: loginRequest.email } });
+
+    if (!manager) {
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    const passwordMatch = await comparePassword(loginRequest.password, manager.password);
+    if (!passwordMatch) {
+      throw new BadRequestException('Email or password is not valid');
+    }
+
+    const tokens = generateTokens(manager.id.toString(), 24); // Assuming 24 hours for refresh token expiration
+
+    return new LoginResponse({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      resource_id: manager.id.toString(),
+      scope: loginRequest.scope || 'managers',
+      created_at: new Date().toISOString(),
+      remember_in_hours: 24, // Assuming 24 hours for access token expiration
+    });
   }
 
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {

@@ -1,6 +1,5 @@
 import {
   Body,
-  HttpException,
   HttpStatus,
   Controller,
   Post,
@@ -8,14 +7,13 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { LogoutManagerDto } from './dto/logout-manager.dto';
 import { ManagersService } from './managers.service';
-import { SignupManagerDto, SignupManagerResponse } from './dto/signup-manager.dto'; // Use SignupManagerDto from new code
+import { SignupManagerDto, SignupManagerResponse } from './dto/signup-manager.dto';
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { Manager } from '../../entities/managers';
-import { LogoutManagerRequest } from './dto/logout-manager.dto';
+import { LogoutManagerRequest, LogoutManagerDto } from './dto/logout-manager.dto';
 
 @Controller('/api/managers')
 @ApiTags('Managers')
@@ -23,21 +21,20 @@ export class ManagersController {
   constructor(private readonly managersService: ManagersService) {}
 
   @Post('/signup')
-  @HttpCode(HttpStatus.CREATED) // Use HttpStatus.CREATED from new code
-  async signup(@Body() signupManagerRequest: SignupManagerDto): Promise<SignupManagerResponse> { // Use SignupManagerDto from new code
+  @HttpCode(HttpStatus.CREATED)
+  async signup(@Body() signupManagerRequest: SignupManagerDto): Promise<SignupManagerResponse> {
     await this.validateSignupRequest(signupManagerRequest);
     const manager: Manager = await this.managersService.signupWithEmail(signupManagerRequest);
     return { user: manager };
   }
 
-  private async validateSignupRequest(request: SignupManagerDto): Promise<void> { // Use SignupManagerDto from new code
-    if (!request.email || !request.password || !request.passwordConfirmation) { // Use passwordConfirmation from new code
+  private async validateSignupRequest(request: SignupManagerDto): Promise<void> {
+    if (!request.email || !request.password || !request.passwordConfirmation) {
       throw new BadRequestException('email, password, and password_confirmation are required');
     }
-    if (request.password !== request.passwordConfirmation) { // Use passwordConfirmation from new code
+    if (request.password !== request.passwordConfirmation) {
       throw new BadRequestException('Password confirmation does not match');
     }
-    // Additional required fields validation
     if (!request.name) {
       throw new BadRequestException('name is required');
     }
@@ -47,13 +44,23 @@ export class ManagersController {
     if (!new RegExp(request.password_regex).test(request.password)) {
       throw new BadRequestException('Password is invalid');
     }
-    // Additional validation logic can be added here
   }
 
   @Post('/login')
   async login(@Body() request: LoginRequest): Promise<LoginResponse> {
     this.validateLoginRequest(request);
-    return this.managersService.loginManager(request);
+    const loginResponse = await this.managersService.loginManager(request);
+    return {
+      access_token: loginResponse.access_token,
+      refresh_token: loginResponse.refresh_token,
+      resource_owner: loginResponse.resource_owner,
+      resource_id: loginResponse.resource_id,
+      expires_in: loginResponse.expires_in,
+      token_type: loginResponse.token_type,
+      scope: request.scope,
+      created_at: loginResponse.created_at,
+      refresh_token_expires_in: loginResponse.refresh_token_expires_in
+    };
   }
 
   @Post('/refresh-token')
@@ -63,26 +70,18 @@ export class ManagersController {
   }
 
   @Post('/logout')
-  async logout(@Body() logoutManagerRequest: LogoutManagerRequest) {
+  async logout(@Body() logoutManagerRequest: LogoutManagerRequest | LogoutManagerDto) {
     if (!logoutManagerRequest.token) {
       throw new BadRequestException('token is required');
     }
-    return this.managersService.logoutManager(logoutManagerRequest);
-  }
-
-  @Post('/logout')
-  async logout(@Body() logoutManagerDto: LogoutManagerDto) {
-    if (!logoutManagerDto.token) {
-      throw new BadRequestException('token is required');
-    }
-    await this.managersService.logoutManager(logoutManagerDto);
-    return { message: 'Logout successful' };
+    await this.managersService.logoutManager(logoutManagerRequest);
+    return 'Logout successful'; // Assuming the service method handles both DTOs and returns a string
   }
 
   @Post('/confirm-email')
   @HttpCode(200)
   async confirmEmail(@Body() confirmEmailRequest: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    if (!confirmEmailRequest || !confirmEmailRequest.token) { // Use token from new code
+    if (!confirmEmailRequest || !confirmEmailRequest.token) {
       throw new BadRequestException('confirmation_token is required');
     }
     return this.managersService.confirmEmail(confirmEmailRequest);

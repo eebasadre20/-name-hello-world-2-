@@ -1,44 +1,46 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
+
+import { IsEmail, IsString, MinLength, Matches, IsNotEmpty, ValidateIf } from 'class-validator';
 
 export class LoginRequest {
   @IsEmail()
   email: string;
 
-  @IsString()
-  @MinLength(8)
-  @MaxLength(50)
+  @ValidateIf(o => o.grant_type === 'password')
+  @IsNotEmpty({ message: 'password is required' })
+  @MinLength(8, { message: 'Password is invalid' })
+  @Matches('{{password_regex}}', { message: 'Password is invalid' })
   password: string;
 
+  @IsNotEmpty({ message: 'grant_type is required' })
   @IsString()
-  @IsOptional()
-  client_id?: string;
+  grant_type: 'password' | 'refresh_token';
 
   @IsString()
-  @IsOptional()
-  client_secret?: string;
+  @IsNotEmpty({ message: 'client_id is required' })
+  client_id: string;
 
   @IsString()
-  @IsOptional()
-  scope?: string;
+  @IsNotEmpty({ message: 'client_secret is required' })
+  client_secret: string;
+
+  @ValidateIf(o => o.grant_type === 'refresh_token')
+  @IsNotEmpty({ message: 'refresh_token is required' })
+  @IsString()
+  refresh_token: string;
+
+  @IsNotEmpty({ message: 'scope is required' })
+  @IsString()
+  scope: string;
 }
 
 export class LoginResponse {
   access_token: string;
   refresh_token: string;
   resource_owner: string = 'managers';
-  resource_id: string;
+  resource_id: number;
   expires_in: number = 86400; // 24 hours to seconds
   token_type: string = 'Bearer';
   scope: string;
-  created_at: string;
-  refresh_token_expires_in: number; // This will be calculated based on remember_in_hours
-
-  constructor({access_token, refresh_token, resource_id, scope, created_at, remember_in_hours}: {access_token: string, refresh_token: string, resource_id: string, scope: string, created_at: string, remember_in_hours: number}) {
-    this.access_token = access_token;
-    this.refresh_token = refresh_token;
-    this.resource_id = resource_id;
-    this.scope = scope;
-    this.created_at = created_at;
-    this.refresh_token_expires_in = remember_in_hours * 3600; // convert hours to seconds
-  }
+  created_at: number;
+  refresh_token_expires_in: number | null;
 }
