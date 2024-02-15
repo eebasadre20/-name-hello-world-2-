@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { validate as isEmailValid } from 'email-validator'; // Added email-validator import
 import { Manager } from '../../entities/managers'; // Updated import path
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
@@ -9,7 +10,7 @@ import { LogoutManagerRequest } from './dto/logout-manager.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
-import { hashPassword } from './utils/password.util'; // hashPassword is now imported
+import { hashPassword, comparePassword } from './utils/password.util'; // hashPassword and comparePassword are now imported
 import { generateConfirmationToken } from './utils/token.util';
 import { validateTokenExpiration } from './utils/validation.util';
 import { ConfigService } from '@nestjs/config';
@@ -34,6 +35,11 @@ export class ManagersService {
     const existingManager = await this.managersRepository.findOne({ where: { email: signupManagerDto.email } });
     if (existingManager) {
       throw new BadRequestException('Email is already taken');
+    }
+
+    // Validate the email
+    if (!isEmailValid(signupManagerDto.email)) {
+      throw new BadRequestException('Invalid email format');
     }
 
     // Hash the password
@@ -61,13 +67,10 @@ export class ManagersService {
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    if (!request || !request.confirmation_token) {
-      throw new BadRequestException('confirmation_token is required');
-    }
-
+    const { token } = request;
     const manager = await this.managersRepository.findOne({
       where: {
-        confirmation_token: request.confirmation_token,
+        confirmation_token: token,
         confirmed_at: null,
       },
     });
@@ -85,7 +88,7 @@ export class ManagersService {
     manager.confirmed_at = new Date();
     await this.managersRepository.save(manager);
 
-    return new ConfirmEmailResponse(manager);
+    return { user: manager }; // Updated to match the expected return type
   }
 
   // ... other service methods ...

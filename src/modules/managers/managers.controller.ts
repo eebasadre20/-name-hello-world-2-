@@ -1,4 +1,4 @@
- {
+import {
   Body,
   HttpException,
   HttpStatus,
@@ -18,7 +18,7 @@ import { LogoutManagerRequest, LogoutManagerDto } from './dto/logout-manager.dto
 import { RequestPasswordResetDTO } from './dto/request-password-reset.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 
-@Controller('/api/managers')
+@Controller('/api/managers') // Updated to match the existing code's route prefix
 @ApiTags('Managers')
 export class ManagersController {
   private passwordMinLength = 8; // Assuming the password minimum length is 8
@@ -60,7 +60,7 @@ export class ManagersController {
   @Post('/confirm-email')
   @HttpCode(HttpStatus.OK)
   async confirmEmail(@Body() confirmEmailRequest: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    if (!confirmEmailRequest.confirmation_token) {
+    if (!confirmEmailRequest || !confirmEmailRequest.token) {
       throw new BadRequestException('confirmation_token is required');
     }
     return this.managersService.confirmEmail(confirmEmailRequest);
