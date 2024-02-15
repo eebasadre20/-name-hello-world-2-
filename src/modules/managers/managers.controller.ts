@@ -1,4 +1,4 @@
- {
+import {
   Body,
   HttpException,
   HttpStatus,
@@ -8,7 +8,6 @@
   HttpCode,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { RequestPasswordResetDTO } from './dto/request-password-reset.dto'; // Added import for RequestPasswordResetDTO
 import { ManagersService } from './managers.service';
 import { SignupManagerDto, SignupManagerResponse } from './dto/signup-manager.dto';
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
@@ -16,6 +15,8 @@ import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { Manager } from '../../entities/managers';
 import { LogoutManagerRequest, LogoutManagerDto } from './dto/logout-manager.dto';
+import { RequestPasswordResetDTO } from './dto/request-password-reset.dto'; // Added import for RequestPasswordResetDTO
+import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto'; // Added import for ConfirmResetPasswordDTO
 
 @Controller('/api/managers')
 @ApiTags('Managers')
@@ -69,6 +70,24 @@ export class ManagersController {
   async refreshToken(@Body() request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
     this.validateRefreshTokenRequest(request);
     return this.managersService.refreshToken(request);
+  }
+
+  @Post('/confirm-reset-password')
+  @HttpCode(HttpStatus.OK)
+  async confirmResetPassword(@Body() confirmResetPasswordRequest: ConfirmResetPasswordRequest): Promise<ConfirmResetPasswordResponse> {
+    if (!confirmResetPasswordRequest.reset_token || !confirmResetPasswordRequest.password || !confirmResetPasswordRequest.password_confirmation) {
+      throw new BadRequestException('reset_token, password, and password_confirmation are required');
+    }
+    if (confirmResetPasswordRequest.password !== confirmResetPasswordRequest.password_confirmation) {
+      throw new BadRequestException('Password confirmation does not match');
+    }
+    if (confirmResetPasswordRequest.password.length < this.managersService.getPasswordMinLength()) {
+      throw new BadRequestException('Password is invalid');
+    }
+    if (!new RegExp(this.managersService.getPasswordRegex()).test(confirmResetPasswordRequest.password)) {
+      throw new BadRequestException('Password is invalid');
+    }
+    return this.managersService.confirmResetPassword(confirmResetPasswordRequest);
   }
 
   @Post('/logout')
