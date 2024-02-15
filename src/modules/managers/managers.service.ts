@@ -26,11 +26,33 @@ export class ManagersService {
   ) {}
 
   async signupWithEmail(request: SignupManagerRequest): Promise<SignupManagerResponse> {
-    const { email, password } = request;
+    const { email, password, password_confirmation } = request;
+
+    if (!email || !password) {
+      throw new BadRequestException('Missing required fields');
+    }
+
+    if (password_confirmation && password !== password_confirmation) {
+      throw new BadRequestException('Password confirmation does not match');
+    }
+
+    if (!validateEmail(email)) {
+      throw new BadRequestException('Invalid email format');
+    }
+
+    const passwordMinLength = config().authentication.passwordMinLength;
+    if (password.length < passwordMinLength) {
+      throw new BadRequestException('Password is too short');
+    }
+
+    const passwordRegex = new RegExp(config().authentication.passwordRegex);
+    if (!passwordRegex.test(password)) {
+      throw new BadRequestException('Password does not meet complexity requirements');
+    }
 
     const existingManager = await this.managersRepository.findOne({ where: { email } });
-    if (existingManager || !validateEmail(email)) {
-      throw new BadRequestException('Email is already taken or invalid');
+    if (existingManager) {
+      throw new BadRequestException('Email is already taken');
     }
 
     const hashedPassword = await hashPassword(password);
@@ -45,7 +67,7 @@ export class ManagersService {
     await this.managersRepository.save(manager);
 
     const confirmationUrl = `http://yourfrontend.com/confirm-email?confirmation_token=${confirmationToken}`;
-    await sendConfirmationEmail(
+    await this.sendConfirmationEmail(
       email,
       confirmationToken,
       confirmationUrl,

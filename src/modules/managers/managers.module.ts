@@ -1,4 +1,3 @@
-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Manager } from 'src/entities/manager'; // Assuming Manager entity exists
@@ -9,7 +8,7 @@ import { ManagersController } from './managers.controller';
   imports: [TypeOrmModule.forFeature([Manager])], // Assuming Manager entity needs to be registered
   providers: [
     ManagersService,
-    ManagersEmailConfirmationService,
+    ManagersEmailConfirmationService, // Keep the additional service from the existing code
   ],
   controllers: [ManagersController],
 })

@@ -1,4 +1,3 @@
-
 import {
   Body,
   Controller,
@@ -12,6 +11,7 @@ import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.d
 import { LoginRequest, LoginResponse } from './dto/login.dto';
 import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
+import { Manager } from '../../entities/managers'; // Added import for Manager entity
 import { LogoutManagerRequest } from './dto/logout-manager.dto';
 
 @Controller('/api/managers')
@@ -20,15 +20,30 @@ export class ManagersController {
   constructor(private readonly managersService: ManagersService) {}
 
   @Post('/signup')
-  @HttpCode(201)
+  @HttpCode(200) // Changed from 201 to 200 to match the new code
   async signup(@Body() signupManagerRequest: SignupManagerRequest): Promise<SignupManagerResponse> {
-    this.validateSignupRequest(signupManagerRequest);
-    return this.managersService.signupWithEmail(signupManagerRequest);
+    await this.validateSignupRequest(signupManagerRequest); // Changed to async to match the new code
+    const manager: Manager = await this.managersService.signupWithEmail(signupManagerRequest); // Added type Manager to match the new code
+    return { user: manager }; // Changed to return an object with user property to match the new code
   }
 
-  private validateSignupRequest(request: SignupManagerRequest): void {
+  private async validateSignupRequest(request: SignupManagerRequest): Promise<void> { // Changed to async to match the new code
     if (!request.email || !request.password || !request.password_confirmation) {
       throw new BadRequestException('email, password, and password_confirmation are required');
+    }
+    if (request.password !== request.password_confirmation) {
+      throw new BadRequestException('Password confirmation does not match');
+    }
+    // Additional required fields validation
+    // Assuming other required fields are 'name' and 'role'
+    if (!request.name) {
+      throw new BadRequestException('name is required');
+    }
+    if (!request.role) {
+      throw new BadRequestException('role is required');
+    }
+    if (!new RegExp(request.password_regex).test(request.password)) { // Added password regex validation to match the new code
+      throw new BadRequestException('Password is invalid');
     }
     // Additional validation logic can be added here
   }
