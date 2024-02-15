@@ -17,35 +17,37 @@ import { randomBytes } from 'crypto';
 import { validateLoginInput, validateEmail, validateTokenExpiration } from './utils/validation.util';
 import { hashPassword, comparePassword } from './utils/password.util';
 import { generateTokens, generateConfirmationToken } from './utils/token.util';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ManagersService {
   constructor(
     @InjectRepository(Manager)
     private managersRepository: Repository<Manager>,
+    private configService: ConfigService, // Added from new code
   ) {}
 
   async signupWithEmail(signupManagerDto: SignupManagerRequest): Promise<SignupManagerResponse> {
     const { email, password, password_confirmation } = signupManagerDto;
 
-    if (!email || !password) {
-      throw new BadRequestException('Missing required fields');
+    if (!email || !password || !password_confirmation) {
+      throw new BadRequestException(`${!email ? 'Email' : !password ? 'Password' : 'Password confirmation'} is required`);
     }
 
-    if (password_confirmation && password !== password_confirmation) {
+    if (password !== password_confirmation) {
       throw new BadRequestException('Password confirmation does not match');
     }
 
     if (!validateEmail(email)) {
-      throw new BadRequestException('Invalid email format');
+      throw new BadRequestException('Email is invalid');
     }
 
-    const passwordMinLength = config().authentication.passwordMinLength;
+    const passwordMinLength = this.configService.get<number>('authentication.passwordMinLength') || config().authentication.passwordMinLength; // Merged configuration retrieval
     if (password.length < passwordMinLength) {
       throw new BadRequestException('Password is too short');
     }
 
-    const passwordRegex = new RegExp(config().authentication.passwordRegex);
+    const passwordRegex = new RegExp(this.configService.get<string>('authentication.passwordRegex') || config().authentication.passwordRegex); // Merged configuration retrieval
     if (!passwordRegex.test(password)) {
       throw new BadRequestException('Password does not meet complexity requirements');
     }
@@ -61,8 +63,9 @@ export class ManagersService {
     const manager = this.managersRepository.create({
       email,
       password: hashedPassword,
-      confirmation_token: confirmationToken,
-      confirmed_at: null,
+      confirmation_token: confirmationToken, // Kept from existing code
+      confirmed_at: null, // Kept from existing code
+      // Other required fields must be included here based on the "{{table}}" table structure
     });
     await this.managersRepository.save(manager);
 
@@ -70,10 +73,10 @@ export class ManagersService {
     await sendConfirmationEmail(
       email,
       confirmationToken,
-      confirmationUrl,
+      confirmationUrl, // Ensure the confirmation URL is correct and points to the frontend confirmation page
     );
 
-    return { manager: manager };
+    return { manager: { id: manager.id } }; // Merged return statement
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
@@ -92,7 +95,7 @@ export class ManagersService {
       throw new NotFoundException('Manager not found or already confirmed');
     }
 
-    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, config().authentication.confirmationIn || config().authentication.email_expired_in);
+    const isTokenExpired = !validateTokenExpiration(manager.confirmation_sent_at, this.configService.get<number>('authentication.confirmationIn') || config().authentication.email_expired_in); // Merged configuration retrieval
     if (isTokenExpired) {
       throw new BadRequestException('Confirmation token is expired');
     }

@@ -1,6 +1,6 @@
-
 import {
   Body,
+  HttpStatus,
   Controller,
   Post,
   BadRequestException,
@@ -8,11 +8,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ManagersService } from './managers.service';
+import { SignupManagerDto, SignupManagerResponse } from './dto/signup-manager.dto'; // Use SignupManagerDto from new code
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
-import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
-import { Manager } from '../../entities/managers'; // Added import for Manager entity
+import { Manager } from '../../entities/managers';
 import { LogoutManagerRequest } from './dto/logout-manager.dto';
 
 @Controller('/api/managers')
@@ -21,29 +21,28 @@ export class ManagersController {
   constructor(private readonly managersService: ManagersService) {}
 
   @Post('/signup')
-  @HttpCode(200) // Changed from 201 to 200 to match the new code
-  async signup(@Body() signupManagerRequest: SignupManagerRequest): Promise<SignupManagerResponse> {
-    await this.validateSignupRequest(signupManagerRequest); // Changed to async to match the new code
-    const manager: Manager = await this.managersService.signupWithEmail(signupManagerRequest); // Added type Manager to match the new code
-    return { user: manager }; // Changed to return an object with user property to match the new code
+  @HttpCode(HttpStatus.CREATED) // Use HttpStatus.CREATED from new code
+  async signup(@Body() signupManagerRequest: SignupManagerDto): Promise<SignupManagerResponse> { // Use SignupManagerDto from new code
+    await this.validateSignupRequest(signupManagerRequest);
+    const manager: Manager = await this.managersService.signupWithEmail(signupManagerRequest);
+    return { user: manager };
   }
 
-  private async validateSignupRequest(request: SignupManagerRequest): Promise<void> { // Changed to async to match the new code
-    if (!request.email || !request.password || !request.password_confirmation) {
+  private async validateSignupRequest(request: SignupManagerDto): Promise<void> { // Use SignupManagerDto from new code
+    if (!request.email || !request.password || !request.passwordConfirmation) { // Use passwordConfirmation from new code
       throw new BadRequestException('email, password, and password_confirmation are required');
     }
-    if (request.password !== request.password_confirmation) {
+    if (request.password !== request.passwordConfirmation) { // Use passwordConfirmation from new code
       throw new BadRequestException('Password confirmation does not match');
     }
     // Additional required fields validation
-    // Assuming other required fields are 'name' and 'role'
     if (!request.name) {
       throw new BadRequestException('name is required');
     }
     if (!request.role) {
       throw new BadRequestException('role is required');
     }
-    if (!new RegExp(request.password_regex).test(request.password)) { // Added password regex validation to match the new code
+    if (!new RegExp(request.password_regex).test(request.password)) {
       throw new BadRequestException('Password is invalid');
     }
     // Additional validation logic can be added here
@@ -72,7 +71,7 @@ export class ManagersController {
   @Post('/confirm-email')
   @HttpCode(200)
   async confirmEmail(@Body() confirmEmailRequest: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    if (!confirmEmailRequest || !confirmEmailRequest.confirmation_token) {
+    if (!confirmEmailRequest || !confirmEmailRequest.token) { // Use token from new code
       throw new BadRequestException('confirmation_token is required');
     }
     return this.managersService.confirmEmail(confirmEmailRequest);
@@ -94,7 +93,7 @@ export class ManagersController {
   private validateRefreshTokenRequest(request: RefreshTokenRequest): void {
     const { refresh_token, scope } = request;
     if (!refresh_token || !scope) {
-      throw a BadRequestException(`${!refresh_token ? 'refresh_token' : 'scope'} is required`);
+      throw new BadRequestException(`${!refresh_token ? 'refresh_token' : 'scope'} is required`);
     }
   }
 }
