@@ -6,6 +6,7 @@ import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manage
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
 import { LogoutManagerRequest, LogoutManagerResponse } from './dto/logout-manager.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
+import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { sendConfirmationEmail, sendPasswordResetEmail } from './utils/email.util';
 import * as bcrypt from 'bcrypt';
 import * as moment from 'moment';
@@ -80,6 +81,40 @@ export class ManagersService {
     return { message: 'Password reset successfully' };
   }
 
+  async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
+    const { refresh_token, scope } = request;
+
+    // Assuming a method exists to validate the refresh token
+    const isValidToken = this.validateRefreshToken(refresh_token);
+    if (!isValidToken) {
+      throw new BadRequestException('Refresh token is not valid');
+    }
+
+    // Assuming a method exists to delete the old refresh token
+    await this.deleteOldRefreshToken(refresh_token);
+
+    // Generate new tokens
+    const newAccessToken = jwt.sign({ scope }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const newRefreshToken = jwt.sign({ scope }, process.env.JWT_REFRESH_SECRET, { expiresIn: `${request.remember_in_hours}h` });
+
+    // Assuming a method to get manager's details
+    const managerDetails = await this.getManagerDetailsFromToken(refresh_token);
+
+    const response: RefreshTokenResponse = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      resource_owner: scope,
+      resource_id: managerDetails.id,
+      expires_in: 86400, // 24 hours in seconds
+      token_type: 'Bearer',
+      scope: scope,
+      created_at: new Date().toISOString(),
+      refresh_token_expires_in: request.remember_in_hours * 3600, // Convert hours to seconds
+    };
+
+    return response;
+  }
+
   // Placeholder for the blacklistToken function. Replace with your actual implementation.
   private async blacklistToken(token: string, type: string): Promise<void> {
     // Logic to blacklist the token
@@ -87,5 +122,19 @@ export class ManagersService {
     // This is a placeholder. Implement your token blacklisting logic here.
   }
 
-  // ... other service methods
+  private async validateRefreshToken(token: string): Promise<boolean> {
+    // Placeholder for refresh token validation logic
+    // This should interact with your token storage mechanism to validate
+    return true; // This should be replaced with actual validation logic
+  }
+
+  private async deleteOldRefreshToken(token: string): Promise<void> {
+    // Placeholder for logic to delete the old refresh token from storage
+  }
+
+  private async getManagerDetailsFromToken(token: string): Promise<{ id: string }> {
+    // Placeholder for logic to extract manager details from the refresh token
+    // This is highly dependent on how you store and manage tokens
+    return { id: 'managerId' }; // This should be replaced with actual logic to extract manager ID
+  }
 }
