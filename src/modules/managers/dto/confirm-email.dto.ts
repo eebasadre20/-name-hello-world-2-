@@ -1,12 +1,11 @@
 
-import { IsString, Matches, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 import { Manager } from '../../entities/managers'; // This import is correct and should remain unchanged
 
 export class ConfirmEmailRequest {
-  @IsNotEmpty({ message: 'confirmation_token is required' })
+  @IsNotEmpty({ message: 'confirmation_token is required' }) // Updated validation message
   @IsString()
-  @Matches(/^[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/, { message: 'Invalid token format' })
-  token: string;
+  confirmation_token: string; // Renamed field to match the requirement
 }
 
 export class ConfirmEmailResponse {
