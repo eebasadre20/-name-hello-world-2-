@@ -1,5 +1,4 @@
-
-import { sign, verify } from 'jsonwebtoken';
+import { sign } from 'jsonwebtoken';
 import { randomBytes, createTransport } from 'crypto';
 import { differenceInHours } from 'date-fns';
 import { Manager } from '../../entities/managers';
@@ -30,15 +29,15 @@ export const generateRefreshToken = (user: Manager, rememberInHours: number): st
   );
 };
 
-export const generateTokens = (managerId: string, rememberInHours: number) => {
+export const generateTokens = (managerId: string, accessExpiresIn: number, refreshExpiresIn: number) => {
   const manager = fetchManagerDetails(managerId);
 
-  const accessTokenExpiresIn = 24 * 60 * 60; // 24 hours in seconds
-  const refreshTokenExpiresIn = rememberInHours * 60 * 60; // Convert hours to seconds based on remember_in_hours
+  const accessTokenExpiresIn = accessExpiresIn * 60 * 60; // Convert hours to seconds
+  const refreshTokenExpiresIn = refreshExpiresIn * 60 * 60; // Convert hours to seconds
 
   const access_token = sign(
     { 
-      id: manager.id, 
+      id: manager.id,
       email: manager.email,
     },
     process.env.ACCESS_TOKEN_SECRET,
@@ -47,18 +46,18 @@ export const generateTokens = (managerId: string, rememberInHours: number) => {
 
   const refresh_token = sign(
     { 
-      id: manager.id, 
+      id: manager.id,
       email: manager.email,
     },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: refreshTokenExpiresIn }
   );
 
-  return {
-    access_token,
-    refresh_token,
-    expires_in: accessTokenExpiresIn,
-    refresh_token_expires_in: refreshTokenExpiresIn,
+  return { // Return the tokens along with their expiration times
+    access_token: access_token,
+    refresh_token: refresh_token,
+    expires_in: accessTokenExpiresIn, // already in seconds
+    refresh_token_expires_in: refreshTokenExpiresIn, // already in seconds
   };
 };
 
@@ -104,14 +103,6 @@ export const sendConfirmationEmail = async (email: string, token: string): Promi
   await transporter.sendMail(mailOptions);
 };
 
-function fetchManagerDetails(managerId: string): Manager {
-  return {
-    id: managerId,
-    email: 'manager@example.com',
-    // other manager properties
-  } as Manager;
-}
-
 // Function to generate a secure random confirmation token
 export const generateConfirmationToken = async (): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -125,3 +116,20 @@ export const generateConfirmationToken = async (): Promise<string> => {
     });
   });
 };
+
+function fetchManagerDetails(managerId: string): Manager {
+  return {
+    id: managerId,
+    email: 'manager@example.com',
+    // other manager properties
+  } as Manager;
+}
+
+async function fetchManagerByConfirmationToken(token: string): Promise<Manager | null> {
+  // This function should be implemented to fetch the manager by the confirmation token
+  // For example, it could look up the manager in the database by the token
+  // This is a placeholder function for the purpose of this example
+  return null; // Replace with actual lookup logic
+}
+
+const email_expired_in = 24; // Assuming 24 hours for email confirmation expiration
