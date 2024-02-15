@@ -25,7 +25,29 @@ export class ManagersService {
   ) {}
 
   async signupWithEmail(request: SignupManagerRequest): Promise<SignupManagerResponse | ManagerResponse> {
-    // Existing signupWithEmail implementation
+    const { email, password } = request;
+
+    const existingManager = await this.managersRepository.findOne({ where: { email } });
+    if (existingManager) {
+      throw new BadRequestException('Email is already taken');
+    }
+
+    const confirmationToken = randomBytes(32).toString('hex');
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const manager = this.managersRepository.create({
+      email,
+      password: hashedPassword,
+      confirmation_token: confirmationToken,
+      confirmed_at: null,
+    });
+    await this.managersRepository.save(manager);
+
+    const confirmationUrl = `http://yourfrontend.com/confirm-email?confirmation_token=${confirmationToken}`;
+    await sendConfirmationEmail(email, confirmationToken, confirmationUrl);
+
+    return { user: manager };
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
@@ -73,4 +95,6 @@ export class ManagersService {
   private async blacklistToken(token: string, type: string): Promise<void> {
     // Logic to blacklist the token
   }
+
+  // ... other service methods
 }
