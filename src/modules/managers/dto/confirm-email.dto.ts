@@ -8,7 +8,12 @@ export class ConfirmEmailRequest {
 }
 
 export class ConfirmEmailResponse {
-  user: Manager;
+  user: {
+    id: string;
+    created_at: Date;
+    updated_at: Date;
+    // Add other necessary fields from the Manager model here as needed
+  };
 
   constructor(manager: Manager) {
     this.user = {
