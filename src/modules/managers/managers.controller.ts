@@ -1,4 +1,4 @@
-import {
+ {
   Body,
   HttpException,
   HttpStatus,
@@ -60,7 +60,7 @@ export class ManagersController {
   @Post('/confirm-email')
   @HttpCode(HttpStatus.OK)
   async confirmEmail(@Body() confirmEmailRequest: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    if (!confirmEmailRequest || !confirmEmailRequest.token) {
+    if (!confirmEmailRequest.confirmation_token) {
       throw new BadRequestException('confirmation_token is required');
     }
     return this.managersService.confirmEmail(confirmEmailRequest);

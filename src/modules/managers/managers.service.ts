@@ -61,10 +61,13 @@ export class ManagersService {
   }
 
   async confirmEmail(request: ConfirmEmailRequest): Promise<ConfirmEmailResponse> {
-    const { token } = request;
+    if (!request || !request.confirmation_token) {
+      throw new BadRequestException('confirmation_token is required');
+    }
+
     const manager = await this.managersRepository.findOne({
       where: {
-        confirmation_token: token,
+        confirmation_token: request.confirmation_token,
         confirmed_at: null,
       },
     });
@@ -82,7 +85,7 @@ export class ManagersService {
     manager.confirmed_at = new Date();
     await this.managersRepository.save(manager);
 
-    return { user: manager }; // Updated to match the expected return type
+    return new ConfirmEmailResponse(manager);
   }
 
   // ... other service methods ...

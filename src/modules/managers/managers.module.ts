@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Manager } from '../../entities/managers'; // Corrected import path for Manager entity
+import { Manager } from '../../entities/managers.ts'; // Corrected import path for Manager entity
 import { ManagersService, ManagersEmailConfirmationService } from './managers.service';
 import { ManagersController } from './managers.controller';
-import { AuthModule } from '../auth/auth.module'; // Corrected relative import path for AuthModule
+// AuthModule import removed as no authentication is required for the email confirmation endpoint
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Manager]), // Keep the corrected Manager entity registration
-    AuthModule, // Include AuthModule for authentication
+    // AuthModule import removed as no authentication is required for the email confirmation endpoint
   ],
   providers: [
     ManagersService,
