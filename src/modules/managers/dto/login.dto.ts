@@ -41,6 +41,8 @@ export class LoginResponse {
   expires_in: number = 86400; // 24 hours to seconds
   token_type: string = 'Bearer';
   scope: string;
-  created_at: number;
-  refresh_token_expires_in: number | null;
+  created_at: string;
+  refresh_token_expires_in: number;
 }
+
+// Add any additional DTOs or types below if necessary

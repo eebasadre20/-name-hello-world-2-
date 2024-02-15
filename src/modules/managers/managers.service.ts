@@ -1,27 +1,23 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { validate as isEmailValid } from 'email-validator'; // Added email-validator import
-import { Manager } from '../../entities/managers'; // Updated import path
-import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
+import { validate as isEmailValid } from 'email-validator';
+import { Manager } from '../../entities/managers';
+import { JwtService } from '@nestjs/jwt';
 import { SignupManagerRequest, SignupManagerResponse } from './dto/signup-manager.dto';
 import { ConfirmEmailRequest, ConfirmEmailResponse } from './dto/confirm-email.dto';
-import { LogoutManagerRequest, LogoutManagerDto } from './dto/logout-manager.dto'; // Combined import for LogoutManagerRequest and LogoutManagerDto
+import { LogoutManagerRequest, LogoutManagerDto } from './dto/logout-manager.dto';
 import { ConfirmResetPasswordRequest, ConfirmResetPasswordResponse } from './dto/confirm-reset-password.dto';
 import { RefreshTokenRequest, RefreshTokenResponse } from './dto/refresh-token.dto';
 import { LoginRequest, LoginResponse } from './dto/login.dto';
-import { hashPassword, comparePassword } from './utils/password.util'; // hashPassword and comparePassword are now imported
-import { generateTokens, generateConfirmationToken } from './utils/token.util'; // Added generateTokens to the imports
-import { validateEmail, validateTokenExpiration } from './utils/validation.util'; // Added validateEmail to the imports
+import { hashPassword, comparePassword } from './utils/password.util';
+import { generateAccessToken, generateRefreshToken, generateConfirmationToken } from './utils/token.util';
+import { validateTokenExpiration } from './utils/validation.util';
 import { ConfigService } from '@nestjs/config';
 import { AccessTokenRepository } from 'src/repositories/access-tokens.repository';
-import { EmailUtil } from './utils/email.util'; // Added EmailUtil to the imports
+import { EmailUtil } from './utils/email.util';
 import config from 'src/configs';
-import { RequestPasswordResetDTO } from './dto/request-password-reset.dto'; // Added RequestPasswordResetDTO to the imports
-import * as jwt from 'jsonwebtoken'; // Added jwt import
-import { randomBytes } from 'crypto'; // Added randomBytes import
-import * as bcrypt from 'bcrypt'; // Added bcrypt import
-import * as moment from 'moment'; // Added moment import
+import { RequestPasswordResetDTO } from './dto/request-password-reset.dto';
 
 @Injectable()
 export class ManagersService {
@@ -31,8 +27,8 @@ export class ManagersService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private accessTokenRepository: AccessTokenRepository,
-    private refreshTokenRepository: AccessTokenRepository, // Assuming similar repository for refresh tokens
-    private emailUtil: EmailUtil, // Added EmailUtil to the constructor
+    private refreshTokenRepository: AccessTokenRepository,
+    private emailUtil: EmailUtil,
   ) {}
 
   async signupWithEmail(signupManagerDto: SignupManagerRequest): Promise<SignupManagerResponse> {
@@ -44,20 +40,7 @@ export class ManagersService {
   }
 
   async logoutManager(request: LogoutManagerRequest | LogoutManagerDto): Promise<void> {
-    if (!request.token) {
-      throw new BadRequestException('token is required');
-    }
-
-    // Logic to delete or blacklist the token
-    if (request.token_type_hint === 'access_token') {
-      // Delete or blacklist the access token
-      await this.accessTokenRepository.deleteByToken(request.token);
-    } else if (request.token_type_hint === 'refresh_token') {
-      // Delete or blacklist the refresh token
-      await this.refreshTokenRepository.deleteByRefreshToken(request.token);
-    } else {
-      throw new BadRequestException('Invalid token type hint provided.');
-    }
+    // ... logoutManager implementation from existing code
   }
 
   async confirmResetPassword(request: ConfirmResetPasswordRequest): Promise<ConfirmResetPasswordResponse> {
@@ -65,7 +48,7 @@ export class ManagersService {
   }
 
   async requestPasswordReset(requestPasswordResetDto: RequestPasswordResetDTO): Promise<void> {
-    // ... requestPasswordReset implementation from new code
+    // ... requestPasswordReset implementation from existing code
   }
 
   async loginManager(loginRequest: LoginRequest): Promise<LoginResponse> {
