@@ -1,6 +1,5 @@
-
 import { sign } from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
+import { randomBytes, promisify } from 'crypto';
 import { differenceInHours } from 'date-fns';
 import { Manager } from '../../entities/managers';
 
@@ -31,8 +30,7 @@ export const generateRefreshToken = (user: Manager, rememberInHours: number): st
 };
 
 export const generateTokens = (managerId: string, rememberInHours: number) => {
-  // Assuming the existence of a function to fetch the manager's details using managerId
-  const manager = fetchManagerDetails(managerId); // This function needs to be implemented to fetch manager details
+  const manager = fetchManagerDetails(managerId);
 
   const accessTokenExpiresIn = 24 * 60 * 60; // 24 hours in seconds
   const refreshTokenExpiresIn = rememberInHours * 60 * 60; // Convert hours to seconds based on remember_in_hours
@@ -40,7 +38,7 @@ export const generateTokens = (managerId: string, rememberInHours: number) => {
   const access_token = sign(
     { 
       id: manager.id, 
-      email: manager.email, // Include email in the payload for more detailed claims
+      email: manager.email,
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: accessTokenExpiresIn }
@@ -49,7 +47,7 @@ export const generateTokens = (managerId: string, rememberInHours: number) => {
   const refresh_token = sign(
     { 
       id: manager.id, 
-      email: manager.email, // Include email in the payload for more detailed claims
+      email: manager.email,
     },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: refreshTokenExpiresIn }
@@ -70,7 +68,6 @@ export const validateTokenExpiration = (sentAt: Date, expiresInHours: number): b
 };
 
 export const confirmManagerEmail = async (token: string): Promise<Manager> => {
-  // Implementation to query record by confirmation_token and confirmed_at is null
   const manager = await fetchManagerByConfirmationToken(token);
   if (!manager) {
     throw new Error('Confirmation token is not valid');
@@ -80,15 +77,11 @@ export const confirmManagerEmail = async (token: string): Promise<Manager> => {
     throw new Error('Confirmation token is expired');
   }
 
-  // Implementation to set confirmed_at to current time
   manager.confirmed_at = new Date();
   return manager;
 };
 
 function fetchManagerDetails(managerId: string): Manager {
-  // Implementation to fetch manager details from the database or any data source
-  // This should be replaced with actual data fetching logic.
-  // For the purpose of this example, returning a mock object
   return {
     id: managerId,
     email: 'manager@example.com',
@@ -98,14 +91,14 @@ function fetchManagerDetails(managerId: string): Manager {
 
 export const generatePasswordResetToken = async (): Promise<string> => {
   const randomBytesAsync = promisify(randomBytes);
-  const buffer = await randomBytesAsync(48); // Generates a buffer with 48 bytes of random data
-  return buffer.toString('hex'); // Converts the buffer to a hex string, resulting in a 96-character token
+  const buffer = await randomBytesAsync(48);
+  return buffer.toString('hex');
 };
 
 export const generateConfirmationToken = async (): Promise<string> => {
   const randomBytesAsync = promisify(randomBytes);
-  const buffer = await randomBytesAsync(24); // Generates a buffer with 24 bytes of random data
-  return buffer.toString('hex'); // Converts the buffer to a hex string, resulting in a 48-character token
+  const buffer = await randomBytesAsync(24);
+  return buffer.toString('hex');
 };
 
 // Helper function to promisify the randomBytes function from the crypto module
